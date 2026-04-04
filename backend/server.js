@@ -130,11 +130,19 @@ app.prepare().then(async () => {
           return;
         }
 
-        // Add player to lobby
-        await pgClient.query(
-          'INSERT INTO lobby_players (lobby_id, player_id, ready, is_host) VALUES ($1, $2, $3, $4)',
-          [lobby.id, playerId, false, false]
+        // Check if player is already in the lobby
+        const existingPlayer = await pgClient.query(
+          'SELECT * FROM lobby_players WHERE lobby_id = $1 AND player_id = $2',
+          [lobby.id, playerId]
         );
+
+        // Only insert if player is not already in the lobby
+        if (existingPlayer.rows.length === 0) {
+          await pgClient.query(
+            'INSERT INTO lobby_players (lobby_id, player_id, ready, is_host) VALUES ($1, $2, $3, $4)',
+            [lobby.id, playerId, false, false]
+          );
+        }
 
         // Join socket room
         socket.join(`lobby_${lobby.id}`);

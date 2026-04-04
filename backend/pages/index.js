@@ -54,7 +54,8 @@ export default function Home() {
             if (response.ok) {
               currentLobby = data.lobby;
               document.getElementById('lobbyInfo').textContent = 'Lobby created! Invite code: ' + data.lobby.inviteCode;
-              showLobby(data.lobby);
+              // Host joins the Socket.io room to get real-time updates
+              socket.emit('join_lobby', { inviteCode: data.lobby.inviteCode, playerId });
             }
           };
 
