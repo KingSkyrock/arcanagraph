@@ -10,6 +10,9 @@ export type AppUser = {
   firebaseUid: string;
   email: string | null;
   displayName: string | null;
+  xp: number;
+  level: number;
+  className: string;
   wins: number;
   losses: number;
   gamesPlayed: number;
@@ -23,12 +26,45 @@ type UpsertUserInput = {
   displayName: string | null;
 };
 
+export function getClassNameForLevel(level: number) {
+  if (level <= 1) {
+    return "Spark";
+  }
+
+  if (level <= 4) {
+    return "Ember";
+  }
+
+  if (level <= 9) {
+    return "Adept";
+  }
+
+  if (level <= 14) {
+    return "Enchanter";
+  }
+
+  if (level <= 19) {
+    return "Spellbinder";
+  }
+
+  if (level <= 29) {
+    return "Sorcerer";
+  }
+
+  return "Warlock";
+}
+
 function mapUser(row: Record<string, unknown>): AppUser {
+  const level = Number(row.level ?? 1);
+
   return {
     id: String(row.id),
     firebaseUid: String(row.firebase_uid),
     email: (row.email as string | null) ?? null,
     displayName: (row.display_name as string | null) ?? null,
+    xp: Number(row.xp ?? 0),
+    level,
+    className: getClassNameForLevel(level),
     wins: Number(row.wins),
     losses: Number(row.losses),
     gamesPlayed: Number(row.games_played),
@@ -39,6 +75,41 @@ function mapUser(row: Record<string, unknown>): AppUser {
 
 export async function pingDatabase() {
   await pool.query("SELECT 1");
+}
+
+export async function ensureDatabaseSchema() {
+  await pool.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      firebase_uid TEXT NOT NULL UNIQUE,
+      email TEXT UNIQUE,
+      display_name TEXT,
+      xp INTEGER NOT NULL DEFAULT 0,
+      level INTEGER NOT NULL DEFAULT 1,
+      wins INTEGER NOT NULL DEFAULT 0,
+      losses INTEGER NOT NULL DEFAULT 0,
+      games_played INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS xp INTEGER NOT NULL DEFAULT 0
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS level INTEGER NOT NULL DEFAULT 1
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS users_leaderboard_idx
+    ON users (wins DESC, level DESC, xp DESC, losses ASC, games_played DESC, created_at ASC)
+  `);
 }
 
 export async function upsertUser(input: UpsertUserInput) {
@@ -76,7 +147,7 @@ export async function getLeaderboard(limit = 10) {
     `
       SELECT *
       FROM users
-      ORDER BY wins DESC, losses ASC, games_played DESC, created_at ASC
+      ORDER BY wins DESC, level DESC, xp DESC, losses ASC, games_played DESC, created_at ASC
       LIMIT $1
     `,
     [limit],

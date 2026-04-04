@@ -18,6 +18,9 @@ type AppUser = {
   firebaseUid: string;
   email: string | null;
   displayName: string | null;
+  xp: number;
+  level: number;
+  className: string;
   wins: number;
   losses: number;
   gamesPlayed: number;
@@ -33,6 +36,10 @@ type SessionResponse = {
 
 function formatPlayerName(user: AppUser) {
   return user.displayName || user.email || user.firebaseUid;
+}
+
+function formatPlayerRank(user: AppUser) {
+  return `Level ${user.level} ${user.className} · ${user.xp} XP`;
 }
 
 async function readJson<T>(response: Response) {
@@ -256,10 +263,15 @@ export function LoginForm() {
         <strong>{status}</strong>
         {user ? (
           <div className={styles.record}>
-            <span>{formatPlayerName(user)}</span>
-            <span>
-              {user.wins}W / {user.losses}L / {user.gamesPlayed} GP
-            </span>
+            <div className={styles.recordBlock}>
+              <span>{formatPlayerName(user)}</span>
+              <small>{formatPlayerRank(user)}</small>
+            </div>
+            <div className={styles.recordBlock}>
+              <span>
+                {user.wins}W / {user.losses}L / {user.gamesPlayed} GP
+              </span>
+            </div>
           </div>
         ) : null}
         {error ? <p className={styles.error}>{error}</p> : null}
@@ -278,7 +290,7 @@ export function LoginForm() {
       <div className={styles.leaderboard}>
         <div className={styles.leaderboardHeader}>
           <p className={styles.panelLabel}>Leaderboard</p>
-          <span>Wins / Losses / Games</span>
+          <span>Rank / XP / Record</span>
         </div>
 
         {leaderboard.length ? (
@@ -286,7 +298,10 @@ export function LoginForm() {
             {leaderboard.map((entry, index) => (
               <li key={entry.id} className={styles.leaderboardItem}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{formatPlayerName(entry)}</strong>
+                <div className={styles.leaderboardMeta}>
+                  <strong>{formatPlayerName(entry)}</strong>
+                  <small>{formatPlayerRank(entry)}</small>
+                </div>
                 <span>
                   {entry.wins} / {entry.losses} / {entry.gamesPlayed}
                 </span>

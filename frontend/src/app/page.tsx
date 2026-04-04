@@ -9,7 +9,7 @@ export default function Home() {
         <h1>Hackathon auth, leaderboard storage, and multiplayer-ready backend.</h1>
         <p className={styles.copy}>
           Firebase signs players in. Express owns the session cookie. PostgreSQL
-          tracks users, wins, losses, and games played for the upcoming
+          tracks users, wins, losses, games played, XP, and level classes for the upcoming
           leaderboard.
         </p>
 
@@ -42,7 +42,7 @@ export default function Home() {
         <article className={styles.card}>
           <p>Persistence</p>
           <h2>PostgreSQL</h2>
-          <span>Users store leaderboard stats now, matches can attach later.</span>
+          <span>Users store leaderboard stats, XP, and level rank data now.</span>
         </article>
       </section>
     </main>
