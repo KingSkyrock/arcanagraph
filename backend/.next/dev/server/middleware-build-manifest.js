@@ -1,0 +1,48 @@
+globalThis.__BUILD_MANIFEST = {
+  "pages": {
+    "/": [
+      "static/chunks/0it3_next_dist_compiled_070ajlm._.js",
+      "static/chunks/0it3_next_dist_shared_lib_01ojf52._.js",
+      "static/chunks/0it3_next_dist_client_0b745ya._.js",
+      "static/chunks/0it3_next_dist_0sj6j48._.js",
+      "static/chunks/0it3_react-dom_01~j01_._.js",
+      "static/chunks/0it3_1038pk1._.js",
+      "static/chunks/[root-of-the-server]__0w32acb._.js",
+      "static/chunks/[project]_backend_pages_index_07xvfw~._.js",
+      "static/chunks/turbopack-[project]_backend_pages_index_032mqb~._.js"
+    ],
+    "/_app": [
+      "static/chunks/0it3_next_dist_compiled_070ajlm._.js",
+      "static/chunks/0it3_next_dist_shared_lib_01ojf52._.js",
+      "static/chunks/0it3_next_dist_client_0b745ya._.js",
+      "static/chunks/0it3_next_dist_0sj6j48._.js",
+      "static/chunks/12t3_next_app_0jt-zj..js",
+      "static/chunks/[next]_entry_page-loader_ts_0j~flwh._.js",
+      "static/chunks/0it3_react-dom_01~j01_._.js",
+      "static/chunks/0it3_1038pk1._.js",
+      "static/chunks/[root-of-the-server]__04ei2-m._.js",
+      "static/chunks/[project]_backend_pages__app_07xvfw~._.js",
+      "static/chunks/turbopack-[project]_backend_pages__app_0k51iqs._.js"
+    ],
+    "/_error": [
+      "static/chunks/0it3_next_dist_compiled_070ajlm._.js",
+      "static/chunks/0it3_next_dist_shared_lib_03.1.fy._.js",
+      "static/chunks/0it3_next_dist_client_0b745ya._.js",
+      "static/chunks/0it3_next_dist_0_gxne_._.js",
+      "static/chunks/[next]_entry_page-loader_ts_03r55wc._.js",
+      "static/chunks/0it3_react-dom_01~j01_._.js",
+      "static/chunks/0it3_1038pk1._.js",
+      "static/chunks/[root-of-the-server]__0t7s4rt._.js",
+      "static/chunks/backend_pages__error_07xvfw~._.js",
+      "static/chunks/turbopack-backend_pages__error_0~lyhhg._.js"
+    ]
+  },
+  "devFiles": [],
+  "polyfillFiles": [],
+  "lowPriorityFiles": [
+    "static/development/_buildManifest.js",
+    "static/development/_ssgManifest.js",
+    "static/development/_clientMiddlewareManifest.js"
+  ],
+  "rootMainFiles": []
+};
