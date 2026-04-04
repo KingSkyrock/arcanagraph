@@ -1,0 +1,45 @@
+difficulty,name,uppercase_name,print_prompt,notes
+easy,Chad,CHAD,TRACE CHAD,short four letter country
+easy,Cuba,CUBA,TRACE CUBA,short four letter country
+easy,Fiji,FIJI,TRACE FIJI,short four letter country
+easy,India,INDIA,TRACE INDIA,familiar five letter country
+easy,Italy,ITALY,TRACE ITALY,familiar five letter country
+easy,Japan,JAPAN,TRACE JAPAN,familiar five letter country
+easy,Kenya,KENYA,TRACE KENYA,familiar five letter country
+easy,Malta,MALTA,TRACE MALTA,short five letter country
+easy,Nepal,NEPAL,TRACE NEPAL,short five letter country
+easy,Peru,PERU,TRACE PERU,short four letter country
+easy,Qatar,QATAR,TRACE QATAR,short five letter country
+easy,Spain,SPAIN,TRACE SPAIN,familiar five letter country
+easy,Sudan,SUDAN,TRACE SUDAN,five letter country
+easy,Chile,CHILE,TRACE CHILE,familiar five letter country
+medium,Brazil,BRAZIL,TRACE BRAZIL,common six letter country
+medium,Canada,CANADA,TRACE CANADA,common six letter country
+medium,France,FRANCE,TRACE FRANCE,common six letter country
+medium,Germany,GERMANY,TRACE GERMANY,common seven letter country
+medium,Greece,GREECE,TRACE GREECE,common six letter country
+medium,Ireland,IRELAND,TRACE IRELAND,common seven letter country
+medium,Mexico,MEXICO,TRACE MEXICO,common six letter country
+medium,Morocco,MOROCCO,TRACE MOROCCO,eight letter country
+medium,Nigeria,NIGERIA,TRACE NIGERIA,common seven letter country
+medium,Norway,NORWAY,TRACE NORWAY,common six letter country
+medium,Poland,POLAND,TRACE POLAND,common six letter country
+medium,Sweden,SWEDEN,TRACE SWEDEN,common six letter country
+medium,Turkey,TURKEY,TRACE TURKEY,common six letter country
+medium,Vietnam,VIETNAM,TRACE VIETNAM,common seven letter country
+medium,Zambia,ZAMBIA,TRACE ZAMBIA,common six letter country
+hard,Argentina,ARGENTINA,TRACE ARGENTINA,long country name
+hard,Australia,AUSTRALIA,TRACE AUSTRALIA,long country name
+hard,Cambodia,CAMBODIA,TRACE CAMBODIA,long country name
+hard,Colombia,COLOMBIA,TRACE COLOMBIA,long country name
+hard,Indonesia,INDONESIA,TRACE INDONESIA,long country name
+hard,Kazakhstan,KAZAKHSTAN,TRACE KAZAKHSTAN,long country name
+hard,Luxembourg,LUXEMBOURG,TRACE LUXEMBOURG,long country name
+hard,Philippines,PHILIPPINES,TRACE PHILIPPINES,long country name
+hard,Switzerland,SWITZERLAND,TRACE SWITZERLAND,long country name
+hard,Thailand,THAILAND,TRACE THAILAND,long country name
+hard,United Kingdom,UNITED KINGDOM,TRACE UNITED KINGDOM,two word country name
+hard,United States,UNITED STATES,TRACE UNITED STATES,two word country name
+hard,South Africa,SOUTH AFRICA,TRACE SOUTH AFRICA,two word country name
+hard,Saudi Arabia,SAUDI ARABIA,TRACE SAUDI ARABIA,two word country name
+hard,New Zealand,NEW ZEALAND,TRACE NEW ZEALAND,two word country name

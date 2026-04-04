@@ -1,0 +1,27 @@
+category,skill_family,difficulty,item_id,display_text,print_prompt,trace_prompt,overlay_hint
+letter,letter_tracing,easy,letter_a,A,TRACE LETTER A,Trace uppercase A,two slants and one crossbar
+letter,letter_tracing,medium,letter_b,B,TRACE LETTER B,Trace uppercase B,one tall line and two round bumps
+letter,letter_tracing,easy,letter_c,C,TRACE LETTER C,Trace uppercase C,one curved stroke open to the right
+letter,letter_tracing,medium,letter_d,D,TRACE LETTER D,Trace uppercase D,one tall line and one big curve
+letter,letter_tracing,easy,letter_e,E,TRACE LETTER E,Trace uppercase E,one tall line and three short lines
+letter,letter_tracing,easy,letter_f,F,TRACE LETTER F,Trace uppercase F,one tall line and two short lines
+letter,letter_tracing,medium,letter_g,G,TRACE LETTER G,Trace uppercase G,curved stroke with a short inner line
+letter,letter_tracing,easy,letter_h,H,TRACE LETTER H,Trace uppercase H,two tall lines and one crossbar
+letter,letter_tracing,easy,letter_i,I,TRACE LETTER I,Trace uppercase I,one tall line
+letter,letter_tracing,medium,letter_j,J,TRACE LETTER J,Trace uppercase J,one tall line with a bottom curve
+letter,letter_tracing,medium,letter_k,K,TRACE LETTER K,Trace uppercase K,one tall line and two slants
+letter,letter_tracing,easy,letter_l,L,TRACE LETTER L,Trace uppercase L,one tall line and one bottom line
+letter,letter_tracing,medium,letter_m,M,TRACE LETTER M,Trace uppercase M,four straight strokes
+letter,letter_tracing,medium,letter_n,N,TRACE LETTER N,Trace uppercase N,two tall lines and one diagonal
+letter,letter_tracing,easy,letter_o,O,TRACE LETTER O,Trace uppercase O,one closed round loop
+letter,letter_tracing,medium,letter_p,P,TRACE LETTER P,Trace uppercase P,one tall line and one top bump
+letter,letter_tracing,medium,letter_q,Q,TRACE LETTER Q,Trace uppercase Q,round loop with a short tail
+letter,letter_tracing,medium,letter_r,R,TRACE LETTER R,Trace uppercase R,one tall line one bump and one slant
+letter,letter_tracing,medium,letter_s,S,TRACE LETTER S,Trace uppercase S,one smooth snake curve
+letter,letter_tracing,easy,letter_t,T,TRACE LETTER T,Trace uppercase T,one top line and one tall line
+letter,letter_tracing,easy,letter_u,U,TRACE LETTER U,Trace uppercase U,two tall sides with a bottom curve
+letter,letter_tracing,easy,letter_v,V,TRACE LETTER V,Trace uppercase V,two slanted lines meeting at the bottom
+letter,letter_tracing,hard,letter_w,W,TRACE LETTER W,Trace uppercase W,four slanted strokes
+letter,letter_tracing,easy,letter_x,X,TRACE LETTER X,Trace uppercase X,two crossing slants
+letter,letter_tracing,easy,letter_y,Y,TRACE LETTER Y,Trace uppercase Y,two top slants and one bottom line
+letter,letter_tracing,easy,letter_z,Z,TRACE LETTER Z,Trace uppercase Z,top line diagonal bottom line

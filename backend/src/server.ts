@@ -9,7 +9,7 @@ import {
   getSessionUser,
   setSessionCookie,
 } from "./auth";
-import { getLeaderboard, pingDatabase } from "./db";
+import { ensureDatabaseSchema, getLeaderboard, pingDatabase } from "./db";
 
 function createApp() {
   const app = express();
@@ -102,6 +102,7 @@ function createApp() {
 }
 
 async function start() {
+  await ensureDatabaseSchema();
   await pingDatabase();
   const app = createApp();
   const server = createServer(app);

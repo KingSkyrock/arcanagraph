@@ -275,9 +275,22 @@
 .record {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 16px;
   font-size: 14px;
   font-weight: 700;
+}
+
+.recordBlock {
+  display: grid;
+  gap: 4px;
+}
+
+.recordBlock small,
+.leaderboardMeta small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-soft);
 }
 
 .leaderboardHeader {
@@ -311,6 +324,11 @@
   padding: 0 16px;
   border-radius: 18px;
   background: rgba(45, 17, 217, 0.08);
+}
+
+.leaderboardMeta {
+  display: grid;
+  gap: 4px;
 }
 
 .leaderboardItem strong {
