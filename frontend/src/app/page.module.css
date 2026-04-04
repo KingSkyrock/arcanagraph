@@ -1,142 +1,118 @@
 .page {
-  --background: #fafafa;
-  --foreground: #fff;
-
-  --text-primary: #000;
-  --text-secondary: #666;
-
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
-  --button-secondary-border: #ebebeb;
-
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-geist-sans);
-  background-color: var(--background);
+  display: grid;
+  gap: 32px;
+  min-height: 100vh;
+  padding: 56px;
 }
 
-.main {
-  display: flex;
-  flex: 1;
-  width: 100%;
-  max-width: 800px;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  background-color: var(--foreground);
-  padding: 120px 60px;
+.hero {
+  display: grid;
+  gap: 20px;
+  max-width: 900px;
 }
 
-.intro {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-  gap: 24px;
-}
-
-.intro h1 {
-  max-width: 320px;
-  font-size: 40px;
-  font-weight: 600;
-  line-height: 48px;
-  letter-spacing: -2.4px;
-  text-wrap: balance;
-  color: var(--text-primary);
-}
-
-.intro p {
-  max-width: 440px;
-  font-size: 18px;
-  line-height: 32px;
-  text-wrap: balance;
-  color: var(--text-secondary);
-}
-
-.intro a {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.ctas {
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  max-width: 440px;
-  gap: 16px;
+.kicker {
   font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
-.ctas a {
+.hero h1 {
+  max-width: 12ch;
+  font-size: clamp(56px, 7vw, 88px);
+  line-height: 0.94;
+  letter-spacing: -0.06em;
+}
+
+.copy {
+  max-width: 42rem;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.actions {
   display: flex;
-  justify-content: center;
+  gap: 16px;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
   align-items: center;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 128px;
-  border: 1px solid transparent;
-  transition: 0.2s;
-  cursor: pointer;
-  width: fit-content;
-  font-weight: 500;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 18px;
+  font-weight: 700;
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out,
+    background-color 200ms ease-out;
 }
 
-a.primary {
-  background: var(--text-primary);
-  color: var(--background);
-  gap: 8px;
+.primary {
+  background: var(--accent);
+  color: #f4ffab;
+  box-shadow: var(--shadow);
 }
 
-a.secondary {
-  border-color: var(--button-secondary-border);
+.secondary {
+  border: 1px solid var(--line);
+  background: var(--surface);
 }
 
-/* Enable hover only on non-touch devices */
-@media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
-    background: var(--button-primary-hover);
-    border-color: transparent;
-  }
-
-  a.secondary:hover {
-    background: var(--button-secondary-hover);
-    border-color: transparent;
-  }
+.primary:hover,
+.secondary:hover {
+  transform: translateY(-2px);
 }
 
-@media (max-width: 600px) {
-  .main {
-    padding: 48px 24px;
-  }
-
-  .intro {
-    gap: 16px;
-  }
-
-  .intro h1 {
-    font-size: 32px;
-    line-height: 40px;
-    letter-spacing: -1.92px;
-  }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .logo {
-    filter: invert();
-  }
+.card {
+  display: grid;
+  gap: 12px;
+  min-height: 180px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
 
+.card p {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.card h2 {
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.card span {
+  max-width: 24ch;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 900px) {
   .page {
-    --background: #000;
-    --foreground: #000;
+    padding: 32px;
+  }
 
-    --text-primary: #ededed;
-    --text-secondary: #999;
-
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
-    --button-secondary-border: #1a1a1a;
+  .grid {
+    grid-template-columns: 1fr;
   }
 }
