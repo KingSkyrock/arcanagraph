@@ -1,1 +1,15 @@
-.env
+.env*
+!.env.example
+/node_modules/
+/npm-debug.log*
+*-debug.log
+backend/.env*
+!backend/.env.example
+backend/node_modules/
+backend/coverage/
+progress.md
+postgres-data/
+*.dump
+*.sql.gz
+serviceAccount*.json
+.firebase/
