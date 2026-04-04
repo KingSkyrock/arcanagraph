@@ -1,11 +1,19 @@
-category,skill_family,difficulty,item_id,display_text,print_prompt,trace_prompt,overlay_hint
-equation,quadratic,medium,adv_quad_y_eq_x_sq_minus_4x_plus_3,y = x^2 - 4x + 3,TRACE Y = X SQUARED MINUS 4X PLUS 3,Trace a shifted parabola with two x intercepts,quadratic in standard form
-equation,quadratic,hard,adv_quad_y_eq_neg_half_x_sq_plus_3,y = -0.5x^2 + 3,TRACE Y = NEGATIVE 0.5X SQUARED PLUS 3,Trace a wide upside down parabola,downward opening quadratic
-equation,absolute_value,hard,adv_abs_y_eq_neg_abs_x_minus_1_plus_4,y = -|x - 1| + 4,TRACE Y = NEGATIVE ABS X MINUS 1 PLUS 4,Trace an upside down V shape,reflected absolute value with vertex at 1 comma 4
-equation,linear,medium,adv_linear_y_eq_4x_minus_6,y = 4x - 6,TRACE Y = 4X MINUS 6,Trace a very steep rising line,positive slope with negative intercept
-equation,linear,hard,adv_linear_y_eq_neg_3x_plus_9,y = -3x + 9,TRACE Y = NEGATIVE 3X PLUS 9,Trace a very steep falling line,negative slope with positive intercept
-equation,cubic,hard,adv_cubic_y_eq_x_cubed,y = x^3,TRACE Y = X CUBED,Trace a smooth S curve,cubic curve through the origin
-equation,cubic,hard,adv_cubic_y_eq_x_cubed_minus_3x,y = x^3 - 3x,TRACE Y = X CUBED MINUS 3X,Trace an S curve with bends,cubic with turning points
-equation,square_root,medium,adv_root_y_eq_sqrt_x,y = sqrt(x),TRACE Y = ROOT X,Trace a curve starting at the origin and bending right,starts at x = 0 only
-equation,exponential,hard,adv_exp_y_eq_2_pow_x,y = 2^x,TRACE Y = 2 TO THE X,Trace a curve that rises faster to the right,exponential growth curve
-equation,sine,hard,adv_trig_y_eq_sin_x,y = sin(x),TRACE Y = SIN X,Trace a wave pattern,smooth repeating curve
+category,skill_family,difficulty,template_id,display_template,js_template,type,params,param_ranges,hasTurningPoints
+equation,linear,easy,linear_basic,y = {a}x + {b},({a}) * x + ({b}),explicit,"a,b","a:-3:3:1|b:-5:5:1",false
+equation,linear,medium,linear_steep,y = {a}x + {b},({a}) * x + ({b}),explicit,"a,b","a:-6:-3:1|a:3:6:1|b:-8:8:1",false
+equation,quadratic,easy,quad_vertex_origin,y = {a}x² + {c},({a}) * x * x + ({c}),explicit,"a,c","a:-2:2:0.5|c:-3:3:1",true
+equation,quadratic,medium,quad_standard,y = x² + {b}x + {c},x * x + ({b}) * x + ({c}),explicit,"b,c","b:-4:4:1|c:-5:5:1",true
+equation,quadratic,hard,quad_general,y = {a}x² + {b}x + {c},({a}) * x * x + ({b}) * x + ({c}),explicit,"a,b,c","a:-2:2:0.5|b:-3:3:1|c:-4:4:1",true
+equation,absolute_value,easy,abs_basic,y = |x| + {c},Math.abs(x) + ({c}),explicit,"c","c:-3:3:1",true
+equation,absolute_value,medium,abs_shifted,y = {a}|x - {h}| + {k},({a}) * Math.abs(x - ({h})) + ({k}),explicit,"a,h,k","a:-2:2:0.5|h:-3:3:1|k:-3:3:1",true
+equation,cubic,medium,cubic_basic,y = {a}x³,({a}) * x * x * x,explicit,"a","a:-1:1:0.5",true
+equation,cubic,hard,cubic_depressed,y = x³ + {b}x,x * x * x + ({b}) * x,explicit,"b","b:-4:4:1",true
+equation,square_root,medium,sqrt_basic,y = {a}√(x + {h}),({a}) * Math.sqrt(x + ({h})),explicit,"a,h","a:1:3:0.5|a:-3:-1:0.5|h:-2:3:1",true
+equation,exponential,medium,exp_basic,y = {a}·{b}^x,({a}) * Math.pow({b}\, x),explicit,"a,b","a:1:3:1|b:1.5:3:0.5",false
+equation,exponential,hard,exp_shifted,y = {a}·{b}^x + {c},({a}) * Math.pow({b}\, x) + ({c}),explicit,"a,b,c","a:1:2:1|b:1.5:3:0.5|c:-3:3:1",false
+equation,sine,medium,sine_basic,y = {a}sin(x),({a}) * Math.sin(x),explicit,"a","a:1:3:0.5|a:-3:-1:0.5",true
+equation,sine,hard,sine_transformed,y = {a}sin({b}x) + {c},({a}) * Math.sin(({b}) * x) + ({c}),explicit,"a,b,c","a:1:3:0.5|b:1:3:0.5|c:-2:2:1",true
+equation,cosine,medium,cosine_basic,y = {a}cos(x),({a}) * Math.cos(x),explicit,"a","a:1:3:0.5|a:-3:-1:0.5",true
+equation,reciprocal,hard,recip_basic,y = {a}/x,({a}) / x,explicit,"a","a:1:4:1|a:-4:-1:1",false
+equation,circle,medium,circle_basic,x² + y² = {r}²,NA,parametric_circle,"r","r:1:3:0.5",true
+equation,semicircle,easy,semicircle_upper,y = √({r}² - x²),Math.sqrt(({r})*({r}) - x*x),explicit,"r","r:1:3:0.5",true
