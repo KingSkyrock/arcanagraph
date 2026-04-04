@@ -1,20 +1,18 @@
 {
+  "name": "arcanagraph",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:backend": "npm run dev --workspace=backend",
-    "dev:frontend": "npm run dev --workspace=frontend"
-  },
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
-  "dependencies": {
-    "crypto-random-string": "^5.0.0",
-    "redis": "^5.11.0",
-    "uuid": "^13.0.0",
-    "ws": "^8.20.0"
+    "dev": "concurrently -k -n frontend,backend,auth -c blue,green,magenta \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:emulator\"",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:emulator": "firebase emulators:start --only auth",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "check": "npm --prefix backend run check && npm --prefix frontend run lint"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "9.2.1",
+    "firebase-tools": "14.20.0"
   }
 }

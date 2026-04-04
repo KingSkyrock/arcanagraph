@@ -1,12 +1,11 @@
 __turbopack_load_page_chunks__("/", [
-  "static/chunks/node_modules_next_dist_compiled_0o6l_m6._.js",
-  "static/chunks/node_modules_next_dist_shared_lib_12bi_n7._.js",
-  "static/chunks/node_modules_next_dist_client_0pe1dg-._.js",
-  "static/chunks/node_modules_next_dist_0k8zr~w._.js",
-  "static/chunks/node_modules_next_head_0ii._yd.js",
-  "static/chunks/node_modules_react-dom_0bruynb._.js",
-  "static/chunks/node_modules_11l9xip._.js",
-  "static/chunks/[root-of-the-server]__0_csmq-._.js",
-  "static/chunks/backend_pages_index_07xvfw~._.js",
-  "static/chunks/turbopack-backend_pages_index_0by~tl0._.js"
+  "static/chunks/0it3_next_dist_compiled_070ajlm._.js",
+  "static/chunks/0it3_next_dist_shared_lib_01ojf52._.js",
+  "static/chunks/0it3_next_dist_client_0b745ya._.js",
+  "static/chunks/0it3_next_dist_0sj6j48._.js",
+  "static/chunks/0it3_react-dom_01~j01_._.js",
+  "static/chunks/0it3_1038pk1._.js",
+  "static/chunks/[root-of-the-server]__0w32acb._.js",
+  "static/chunks/[project]_backend_pages_index_07xvfw~._.js",
+  "static/chunks/turbopack-[project]_backend_pages_index_032mqb~._.js"
 ])

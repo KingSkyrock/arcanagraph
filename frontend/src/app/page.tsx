@@ -1,66 +1,50 @@
-import Image from "next/image";
+import Link from "next/link";
 import styles from "./page.module.css";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
+    <main className={styles.page}>
+      <section className={styles.hero}>
+        <p className={styles.kicker}>Arcanagraph</p>
+        <h1>Hackathon auth, leaderboard storage, and multiplayer-ready backend.</h1>
+        <p className={styles.copy}>
+          Firebase signs players in. Express owns the session cookie. PostgreSQL
+          tracks users, wins, losses, games played, XP, and level classes for the upcoming
+          leaderboard.
+        </p>
+
+        <div className={styles.actions}>
+          <Link className={styles.primary} href="/login">
+            Open Login
+          </Link>
           <a
             className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+            href="http://localhost:4000/api/health"
             target="_blank"
-            rel="noopener noreferrer"
+            rel="noreferrer"
           >
-            Documentation
+            Backend Health
           </a>
         </div>
-      </main>
-    </div>
+      </section>
+
+      <section className={styles.grid}>
+        <article className={styles.card}>
+          <p>Identity</p>
+          <h2>Firebase Auth</h2>
+          <span>Email/password auth with emulator support for local testing.</span>
+        </article>
+        <article className={styles.card}>
+          <p>API Layer</p>
+          <h2>Express</h2>
+          <span>Session cookies and future websocket auth live in one backend.</span>
+        </article>
+        <article className={styles.card}>
+          <p>Persistence</p>
+          <h2>PostgreSQL</h2>
+          <span>Users store leaderboard stats, XP, and level rank data now.</span>
+        </article>
+      </section>
+    </main>
   );
 }

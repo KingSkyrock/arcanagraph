@@ -1,6 +1,5 @@
 const express = require('express');
 const { createServer } = require('http');
-const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 const { Client } = require('pg');
@@ -21,14 +20,32 @@ const io = new Server(server, {
   }
 });
 
+function getPostgresConfig() {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (databaseUrl) {
+    const url = new URL(databaseUrl);
+
+    return {
+      host: url.hostname,
+      port: Number(url.port || 5432),
+      database: url.pathname.replace(/^\//, '') || 'arcanagraph',
+      user: decodeURIComponent(url.username || 'postgres'),
+      password: decodeURIComponent(url.password || 'postgres'),
+    };
+  }
+
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT || 5432),
+    database: process.env.DB_NAME || 'arcanagraph',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+  };
+}
+
 // PostgreSQL client
-const pgClient = new Client({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'postgres',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
-});
+const pgClient = new Client(getPostgresConfig());
 
 //#####################################
 // SECTION 1: NEXT.JS SETUP AND WEBSITE SERVING
