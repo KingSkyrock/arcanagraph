@@ -4,9 +4,11 @@ const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 const { Client } = require('pg');
+const path = require('path');
+require('dotenv').config();
 
 const dev = process.env.NODE_ENV !== 'production';
-const app = next({ dev });
+const app = next({ dev, dir: __dirname });
 const handle = app.getRequestHandler();
 
 // Create Express app

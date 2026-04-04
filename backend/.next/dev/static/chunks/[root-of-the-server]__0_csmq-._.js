@@ -654,8 +654,13 @@ function Home() {
                 dangerouslySetInnerHTML: {
                     __html: `
           const socket = io();
+          console.log('Connecting to socket...');
+          socket.on('connect', () => {
+            console.log('Connected to socket:', socket.id);
+          });
           let currentLobby = null;
           let playerId = 'player_' + Math.random().toString(36).substr(2, 9);
+          console.log('Player ID:', playerId);
 
           document.getElementById('createLobbyBtn').onclick = async () => {
             const response = await fetch('/api/lobby', {
@@ -686,11 +691,13 @@ function Home() {
           };
 
           socket.on('joined_lobby', (data) => {
+            console.log('Joined lobby:', data);
             currentLobby = data.lobby;
             showLobby(data.lobby);
           });
 
           socket.on('lobby_update', (data) => {
+            console.log('Lobby update:', data);
             currentLobby = data.lobby;
             updateLobby(data.lobby);
           });
@@ -714,10 +721,14 @@ function Home() {
 
           function updateLobby(lobby) {
             const playersDiv = document.getElementById('players');
-            playersDiv.innerHTML = '<h3>Players:</h3>';
-            lobby.players.forEach(player => {
-              playersDiv.innerHTML += '<div>' + player.player_id + (player.ready ? ' (Ready)' : ' (Not Ready)') + (player.is_host ? ' (Host)' : '') + '</div>';
-            });
+            if (playersDiv) {
+              playersDiv.innerHTML = '<h3>Players:</h3>';
+              lobby.players.forEach(player => {
+                playersDiv.innerHTML += '<div>' + player.player_id + (player.ready ? ' (Ready)' : ' (Not Ready)') + (player.is_host ? ' (Host)' : '') + '</div>';
+              });
+            } else {
+              console.error('Players div not found');
+            }
 
             const readyBtn = document.getElementById('readyBtn');
             const currentPlayer = lobby.players.find(p => p.player_id === playerId);
