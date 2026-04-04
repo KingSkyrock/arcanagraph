@@ -2,14 +2,84 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import { createServer } from "node:http";
+import { Server as SocketIOServer } from "socket.io";
 import { config } from "./config";
 import {
   clearSessionCookie,
   createSession,
   getSessionUser,
+  getSessionUserFromSessionCookie,
   setSessionCookie,
 } from "./auth";
-import { ensureDatabaseSchema, getLeaderboard, pingDatabase } from "./db";
+import {
+  type AppUser,
+  createLobby,
+  ensureDatabaseSchema,
+  getLeaderboard,
+  getLobbyByIdForUser,
+  joinLobbyById,
+  joinLobbyByInviteCode,
+  markLobbyInGame,
+  pingDatabase,
+  startLobbyGame,
+  updateLobbyPlayerReady,
+} from "./db";
+
+type SocketResult<T> = { ok: true; data: T } | { ok: false; error: string };
+type SocketPayload = {
+  inviteCode?: string;
+  lobbyId?: string;
+  ready?: boolean;
+};
+
+function getStatusCode(error: unknown) {
+  const maybeStatus = (error as { statusCode?: number }).statusCode;
+  return typeof maybeStatus === "number" ? maybeStatus : 500;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function parseCookies(cookieHeader?: string) {
+  const cookies: Record<string, string> = {};
+
+  if (!cookieHeader) {
+    return cookies;
+  }
+
+  for (const part of cookieHeader.split(";")) {
+    const separatorIndex = part.indexOf("=");
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const name = decodeURIComponent(part.slice(0, separatorIndex).trim());
+    const value = decodeURIComponent(part.slice(separatorIndex + 1).trim());
+    cookies[name] = value;
+  }
+
+  return cookies;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function requireSessionUser(
+  request: express.Request,
+  response: express.Response,
+) {
+  const user = await getSessionUser(request);
+
+  if (!user) {
+    response.status(401).json({ error: "Sign in first." });
+    return null;
+  }
+
+  return user;
+}
 
 function createApp() {
   const app = express();
@@ -86,6 +156,43 @@ function createApp() {
     }
   });
 
+  app.post("/api/lobbies", async (request, response) => {
+    const user = await requireSessionUser(request, response);
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const settings = isRecord(request.body?.settings) ? request.body.settings : {};
+      const lobby = await createLobby(user.id, settings);
+      response.status(201).json({ lobby });
+    } catch (error) {
+      console.error("Failed to create lobby", error);
+      response.status(getStatusCode(error)).json({
+        error: getErrorMessage(error, "Unable to create lobby."),
+      });
+    }
+  });
+
+  app.get("/api/lobbies/:lobbyId", async (request, response) => {
+    const user = await requireSessionUser(request, response);
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const lobby = await getLobbyByIdForUser(request.params.lobbyId, user.id);
+      response.json({ lobby });
+    } catch (error) {
+      console.error("Failed to load lobby", error);
+      response.status(getStatusCode(error)).json({
+        error: getErrorMessage(error, "Unable to load lobby."),
+      });
+    }
+  });
+
   app.use(
     (
       error: Error,
@@ -101,11 +208,143 @@ function createApp() {
   return app;
 }
 
+function registerLobbySockets(io: SocketIOServer) {
+  io.use(async (socket, next) => {
+    try {
+      const cookies = parseCookies(socket.handshake.headers.cookie);
+      const sessionCookie = cookies[config.sessionCookieName];
+      const user = await getSessionUserFromSessionCookie(sessionCookie);
+
+      if (!user) {
+        next(new Error("Unauthorized"));
+        return;
+      }
+
+      socket.data.user = user;
+      next();
+    } catch (error) {
+      next(error as Error);
+    }
+  });
+
+  io.on("connection", (socket) => {
+    const user = socket.data.user as AppUser | undefined;
+
+    if (!user) {
+      socket.disconnect(true);
+      return;
+    }
+
+    const emitFailure = <T>(ack: ((result: SocketResult<T>) => void) | undefined, error: unknown) => {
+      const message = getErrorMessage(error, "Something went wrong.");
+      socket.emit("lobby:error", { message });
+      ack?.({ ok: false, error: message });
+    };
+
+    socket.on(
+      "lobby:join",
+      async (
+        payload: SocketPayload,
+        ack?: (result: SocketResult<{ lobbyId: string }>) => void,
+      ) => {
+        try {
+          const lobby =
+            typeof payload.inviteCode === "string" && payload.inviteCode.trim()
+              ? await joinLobbyByInviteCode(payload.inviteCode, user.id)
+              : typeof payload.lobbyId === "string" && payload.lobbyId.trim()
+                ? await joinLobbyById(payload.lobbyId, user.id)
+                : null;
+
+          if (!lobby) {
+            throw new Error("Lobby id or invite code is required.");
+          }
+
+          socket.join(`lobby:${lobby.id}`);
+          io.to(`lobby:${lobby.id}`).emit("lobby:update", { lobby });
+          ack?.({ ok: true, data: { lobbyId: lobby.id } });
+        } catch (error) {
+          emitFailure(ack, error);
+        }
+      },
+    );
+
+    socket.on(
+      "lobby:ready",
+      async (
+        payload: SocketPayload,
+        ack?: (result: SocketResult<{ lobbyId: string }>) => void,
+      ) => {
+        try {
+          if (typeof payload.lobbyId !== "string") {
+            throw new Error("Lobby id is required.");
+          }
+
+          const lobby = await updateLobbyPlayerReady(
+            payload.lobbyId,
+            user.id,
+            Boolean(payload.ready),
+          );
+
+          io.to(`lobby:${lobby.id}`).emit("lobby:update", { lobby });
+          ack?.({ ok: true, data: { lobbyId: lobby.id } });
+        } catch (error) {
+          emitFailure(ack, error);
+        }
+      },
+    );
+
+    socket.on(
+      "lobby:start",
+      async (
+        payload: SocketPayload,
+        ack?: (result: SocketResult<{ lobbyId: string }>) => void,
+      ) => {
+        try {
+          if (typeof payload.lobbyId !== "string") {
+            throw new Error("Lobby id is required.");
+          }
+
+          const lobby = await startLobbyGame(payload.lobbyId, user.id);
+          io.to(`lobby:${lobby.id}`).emit("lobby:update", { lobby });
+          io.to(`lobby:${lobby.id}`).emit("game:starting", { lobbyId: lobby.id });
+          ack?.({ ok: true, data: { lobbyId: lobby.id } });
+
+          setTimeout(async () => {
+            try {
+              const activeLobby = await markLobbyInGame(lobby.id);
+              io.to(`lobby:${activeLobby.id}`).emit("lobby:update", {
+                lobby: activeLobby,
+              });
+              io.to(`lobby:${activeLobby.id}`).emit("game:started", {
+                lobbyId: activeLobby.id,
+                route: `/game/${activeLobby.id}`,
+              });
+            } catch (error) {
+              console.error("Failed to mark lobby in game", error);
+            }
+          }, 1500);
+        } catch (error) {
+          emitFailure(ack, error);
+        }
+      },
+    );
+  });
+}
+
 async function start() {
   await ensureDatabaseSchema();
   await pingDatabase();
+
   const app = createApp();
   const server = createServer(app);
+  const io = new SocketIOServer(server, {
+    cors: {
+      origin: config.frontendOrigins,
+      credentials: true,
+    },
+  });
+
+  registerLobbySockets(io);
 
   server.listen(config.port, () => {
     console.log(`Backend listening on http://localhost:${config.port}`);

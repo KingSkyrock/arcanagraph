@@ -22,6 +22,7 @@ backend/coverage/
 /backend/.next/
 /backend/.next-lobby/
 /out/
+/backend/dist/
 
 # production
 /build
