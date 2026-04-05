@@ -21,6 +21,16 @@
   box-shadow: var(--shadow);
 }
 
+.cvPanel {
+  display: grid;
+  gap: 16px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 30px;
+  background: rgba(234, 255, 129, 0.84);
+  box-shadow: var(--shadow);
+}
+
 .kicker,
 .label,
 .summaryCard span,
@@ -121,6 +131,128 @@
   gap: 14px;
 }
 
+.cvBattleLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+.cvContainer {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 860 / 620;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #0a0a1a;
+}
+
+.cvVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.cvGrid,
+.cvDrawing,
+.cvOverlay {
+  position: absolute;
+  top: 11.29%;
+  left: 12.79%;
+  width: 74.42%;
+  height: 77.42%;
+}
+
+.cvOverlay,
+.cvDrawing {
+  transform: scaleX(-1);
+}
+
+.cvGrid {
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+
+.cvSideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cvOpponent {
+  min-height: 240px;
+  padding: 18px;
+  border: 2px solid rgba(196, 160, 255, 0.95);
+  border-radius: 18px;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cvOpponentCard {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+}
+
+.cvOpponentCard strong {
+  font-size: 26px;
+  line-height: 0.98;
+}
+
+.cvEquation {
+  padding: 12px 24px;
+  border: 1px solid rgba(196, 160, 255, 0.95);
+  border-radius: 18px;
+  background: rgba(20, 10, 40, 0.88);
+  color: #e0e0e0;
+  text-align: center;
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cvEquation :global(.katex-display) {
+  margin: 0;
+}
+
+.cvControls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.cvControlGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.scoreDisplay {
+  padding: 8px 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #8c4d00;
+}
+
+.cvAttackCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 20;
+}
+
 .summaryCard {
   display: grid;
   gap: 8px;
@@ -215,6 +347,10 @@
   .summaryGrid {
     grid-template-columns: 1fr;
   }
+
+  .cvBattleLayout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -223,7 +359,8 @@
   }
 
   .hero,
-  .panel {
+  .panel,
+  .cvPanel {
     padding: 20px;
     border-radius: 24px;
   }
@@ -238,6 +375,19 @@
 
   .attackButton,
   .linkButton {
+    width: 100%;
+  }
+
+  .cvOpponent {
+    min-height: 180px;
+  }
+
+  .cvEquation {
+    min-height: 88px;
+    padding: 14px;
+  }
+
+  .cvControlGroup {
     width: 100%;
   }
 }

@@ -21,3 +21,17 @@ export function requireTargetUserId(value: unknown) {
 
   return value.trim();
 }
+
+export function requireAttackScore(value: unknown) {
+  const score = Number(value);
+
+  if (!Number.isFinite(score)) {
+    throw new Error("Attack score must be a number between 0 and 100.");
+  }
+
+  if (score < 0 || score > 100) {
+    throw new Error("Attack score must stay between 0 and 100.");
+  }
+
+  return Math.round(score);
+}

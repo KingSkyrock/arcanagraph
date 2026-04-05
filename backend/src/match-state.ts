@@ -9,6 +9,7 @@ export type MatchAction = {
   attackerUserId: string;
   targetUserId: string;
   damage: number;
+  score: number | null;
   targetDefeated: boolean;
   occurredAt: string;
 };
@@ -29,8 +30,28 @@ export const defaultAttackDamage = 20;
 
 export class MatchStateError extends Error {}
 
+type ApplyMatchAttackOptions = {
+  occurredAt?: string;
+  score?: number | null;
+};
+
 export function clampHealth(health: number, maxHealth: number) {
   return Math.max(0, Math.min(maxHealth, Math.round(health)));
+}
+
+export function normalizeAttackScore(score: number) {
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+export function calculateScoreDamage(score: number, maxDamage: number) {
+  const normalizedScore = normalizeAttackScore(score);
+
+  if (normalizedScore <= 50) {
+    throw new MatchStateError("You need a score above 50% to deal damage.");
+  }
+
+  const normalizedDamage = ((normalizedScore - 50) / 50) * maxDamage;
+  return Math.max(1, Math.round(normalizedDamage));
 }
 
 export function createInitialMatch(
@@ -64,8 +85,16 @@ export function applyMatchAttack(
   match: LobbyMatch,
   attackerUserId: string,
   targetUserId: string,
-  occurredAt = new Date().toISOString(),
+  occurredAtOrOptions: string | ApplyMatchAttackOptions = new Date().toISOString(),
 ): LobbyMatch {
+  const options =
+    typeof occurredAtOrOptions === "string"
+      ? { occurredAt: occurredAtOrOptions, score: null }
+      : {
+          occurredAt: occurredAtOrOptions.occurredAt ?? new Date().toISOString(),
+          score: occurredAtOrOptions.score ?? null,
+        };
+
   if (attackerUserId === targetUserId) {
     throw new MatchStateError("Choose another player to attack.");
   }
@@ -90,10 +119,11 @@ export function applyMatchAttack(
     throw new MatchStateError("That player has already been eliminated.");
   }
 
-  const nextTargetHealth = clampHealth(
-    targetState.health - match.damagePerAttack,
-    match.maxHealth,
-  );
+  const attemptedDamage =
+    options.score === null
+      ? match.damagePerAttack
+      : calculateScoreDamage(options.score, match.damagePerAttack);
+  const nextTargetHealth = clampHealth(targetState.health - attemptedDamage, match.maxHealth);
   const damage = targetState.health - nextTargetHealth;
   const players = match.players.map((player) =>
     player.userId === targetUserId
@@ -111,13 +141,14 @@ export function applyMatchAttack(
     status: finished ? "finished" : "active",
     winnerUserId: finished ? alivePlayers[0]?.userId ?? null : null,
     players,
-    endedAt: finished ? occurredAt : null,
+    endedAt: finished ? options.occurredAt : null,
     lastAction: {
       attackerUserId,
       targetUserId,
       damage,
+      score: options.score,
       targetDefeated: nextTargetHealth === 0,
-      occurredAt,
+      occurredAt: options.occurredAt,
     },
   };
 }

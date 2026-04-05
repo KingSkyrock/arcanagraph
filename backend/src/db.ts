@@ -123,8 +123,14 @@ function parseMatchAction(value: unknown): MatchAction | null {
   }
 
   const damage = Number(value.damage);
+  const score =
+    value.score === null || value.score === undefined ? null : Number(value.score);
 
   if (!Number.isFinite(damage) || damage <= 0) {
+    return null;
+  }
+
+  if (score !== null && (!Number.isFinite(score) || score < 0 || score > 100)) {
     return null;
   }
 
@@ -132,6 +138,7 @@ function parseMatchAction(value: unknown): MatchAction | null {
     attackerUserId: value.attackerUserId,
     targetUserId: value.targetUserId,
     damage: Math.round(damage),
+    score: score === null ? null : Math.round(score),
     targetDefeated: Boolean(value.targetDefeated),
     occurredAt: value.occurredAt,
   };
@@ -880,12 +887,21 @@ export async function attackLobbyPlayer(
   lobbyId: string,
   attackerUserId: string,
   targetUserId: string,
+  score: number,
 ) {
   const validLobbyId = requireValidLobbyId(lobbyId);
   const normalizedTargetUserId = targetUserId.trim();
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
 
   if (!normalizedTargetUserId) {
     throw createDatabaseError("Choose a player to attack.", 400);
+  }
+
+  if (!Number.isFinite(normalizedScore)) {
+    throw createDatabaseError(
+      "Graph attack score is required before damage can be applied.",
+      400,
+    );
   }
 
   if (attackerUserId === normalizedTargetUserId) {
@@ -942,7 +958,9 @@ export async function attackLobbyPlayer(
       let nextMatch: LobbyMatch;
 
       try {
-        nextMatch = applyMatchAttack(match, attackerUserId, normalizedTargetUserId);
+        nextMatch = applyMatchAttack(match, attackerUserId, normalizedTargetUserId, {
+          score: normalizedScore,
+        });
       } catch (error) {
         if (error instanceof MatchStateError) {
           throw createDatabaseError(error.message, 409);

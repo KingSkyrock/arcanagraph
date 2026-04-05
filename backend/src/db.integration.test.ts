@@ -137,7 +137,7 @@ test("attackLobbyPlayer persists match completion and player progression", async
   let currentLobby = lobby;
 
   for (let attack = 0; attack < 5; attack += 1) {
-    currentLobby = await attackLobbyPlayer(currentLobby.id, host.id, guest.id);
+    currentLobby = await attackLobbyPlayer(currentLobby.id, host.id, guest.id, 100);
   }
 
   assert.equal(currentLobby.match?.status, "finished");
@@ -164,6 +164,27 @@ test("attackLobbyPlayer persists match completion and player progression", async
   assert.equal(historyResult.rows[0]?.winner_user_id, host.id);
 });
 
+test("attackLobbyPlayer stores score-based damage in the live match state", async (t) => {
+  const cleanup = createCleanupState();
+  t.after(async () => {
+    await cleanupTestData(cleanup);
+  });
+
+  const { host, guest, lobby } = await createStartedLobby(cleanup);
+  const updatedLobby = await attackLobbyPlayer(lobby.id, host.id, guest.id, 75);
+  const guestMatchPlayer = updatedLobby.match?.players.find((player) => player.userId === guest.id);
+
+  assert.equal(guestMatchPlayer?.health, 90);
+  assert.deepEqual(updatedLobby.match?.lastAction, {
+    attackerUserId: host.id,
+    targetUserId: guest.id,
+    damage: 10,
+    score: 75,
+    targetDefeated: false,
+    occurredAt: updatedLobby.match?.lastAction?.occurredAt,
+  });
+});
+
 test("restartLobbyMatch returns the same players to a waiting ready-up state", async (t) => {
   const cleanup = createCleanupState();
   t.after(async () => {
@@ -174,7 +195,7 @@ test("restartLobbyMatch returns the same players to a waiting ready-up state", a
   let currentLobby = lobby;
 
   for (let attack = 0; attack < 5; attack += 1) {
-    currentLobby = await attackLobbyPlayer(currentLobby.id, host.id, guest.id);
+    currentLobby = await attackLobbyPlayer(currentLobby.id, host.id, guest.id, 100);
   }
 
   const restartedLobby = await restartLobbyMatch(currentLobby.id, guest.id);

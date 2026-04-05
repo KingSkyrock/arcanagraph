@@ -39,6 +39,7 @@ export type MatchAction = {
   attackerUserId: string;
   targetUserId: string;
   damage: number;
+  score: number | null;
   targetDefeated: boolean;
   occurredAt: string;
 };
