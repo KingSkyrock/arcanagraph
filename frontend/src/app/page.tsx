@@ -160,7 +160,7 @@ function HeroSection() {
 
       {/* RIGHT: actual uploaded elephant PNG, flush bottom-right */}
       <div style={{
-        position: 'absolute', right: '0%', bottom: 0,
+        position: 'absolute', right: '0%', bottom: '20%',
         width: '54%', height: '92%',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         zIndex: 5, pointerEvents: 'none',
@@ -230,12 +230,12 @@ function LeaderboardSection() {
   return (
     <section id="leaderboard" style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '96px 24px', background: '#eef4ff',
+      padding: '96px 24px', background: 'rgba(180, 191, 239, 0.99)', position: 'relative', zIndex: 10,
     }}>
       <div style={{ width: '100%', maxWidth: 820 }}>
         <div style={{ textAlign: 'center', marginBottom: 44 }}>
           <h2 style={{
-            fontSize: 60, fontWeight: 900, color: '#1a56db', margin: '0 0 10px',
+            fontSize: 60, fontWeight: 900, color: 'rgb(9, 15, 131)', margin: '0 0 10px',
             fontFamily: " 'Arial Black', 'Oswald', system-ui, sans-serif", letterSpacing: '-1px',
           }}>Leaderboard</h2>
           <p style={{ color: '#64748b', fontSize: 18, fontFamily: "'Nunito', system-ui, sans-serif" }}>
@@ -303,14 +303,52 @@ function LeaderboardSection() {
 export default function HomePage() {
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Nunito', system-ui, sans-serif; }
-      `}</style>
+      <style>{` ... `}</style>
       <Navbar />
       <HeroSection />
       <LeaderboardSection />
+      {/* Place the footer here, before the closing fragment */}
+      <footer
+        style={{
+          width: '100%',
+          background: 'rgba(30, 41, 59, 0.98)',
+          color: '#e0e7ef',
+          fontFamily: "'Nunito', system-ui, sans-serif",
+          fontWeight: 500,
+          fontSize: 18,
+          padding: '48px 0 40px 0',
+          marginTop: 64,
+          boxShadow: '0 -2px 16px rgba(30,41,59,0.08)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          minHeight: 220,
+          zIndex: 20,
+          position: 'relative',
+        }}
+      >
+        <div style={{ maxWidth: 1200, width: '90%', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 24 }}>
+          <div
+            style={{
+              fontWeight: 900,
+              fontSize: 18,
+              letterSpacing: '0.5px',
+              color: '#fff',
+              marginBottom: 8,
+              fontFamily: "'Segoe UI', 'Inter', 'Oswald', sans-serif",
+            }}
+          >
+            Arcanagraph
+          </div>
+        </div>
+        <div style={{ flex: 1 }} />
+        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center', marginBottom: 4 }}>
+          Made with <span style={{ color: '#ef4444', fontSize: 18, verticalAlign: 'middle' }}>♥</span> by ...
+        </div>
+        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center' }}>
+          © 2026 Arcanagraph. All rights reserved.
+        </div>
+      </footer>
     </>
   );
 }

@@ -48,10 +48,10 @@ export default function PlayPage() {
     textDecoration: 'none',
     background: bg,
     color: 'rgb(255, 255, 255)',
-    borderRadius: isSmall ? 16 : 24,
-    padding: isSmall ? '18px 40px' : '32px 64px',
+    borderRadius: isSmall ? 20 : 24,
+    padding: isSmall ? '24px 52px' : '32px 64px',
     fontWeight: 900,
-    fontSize: isSmall ? 18 : 28,
+    fontSize: isSmall ? 22 : 28,
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
@@ -60,21 +60,21 @@ export default function PlayPage() {
     fontFamily: "'Nunito', system-ui, sans-serif",
     letterSpacing: '0.5px',
     border: 'none',
-    boxShadow: `0 ${isSmall ? 4 : 6}px 0px ${shadow}, 0 4px 12px rgba(0, 0, 0, 0.2)`,
+    boxShadow: `0 ${isSmall ? 5 : 6}px 0px ${shadow}, 0 4px 12px rgba(0, 0, 0, 0.2)`,
     transition: 'transform 0.1s ease-out, box-shadow 0.1s, background 0.1s',
     width: '100%',
-    maxWidth: isSmall ? 380 : 450,
+    maxWidth: isSmall ? 420 : 450,
   });
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLElement>, shadow: string, isSmall: boolean, hoverBg: string) => {
     e.currentTarget.style.transform = 'translateY(-2px)';
-    e.currentTarget.style.boxShadow = `0 ${isSmall ? 6 : 8}px 0px ${shadow}, 0 8px 16px rgba(0, 0, 0, 0.2)`;
+    e.currentTarget.style.boxShadow = `0 ${isSmall ? 7 : 8}px 0px ${shadow}, 0 8px 16px rgba(0, 0, 0, 0.2)`;
     e.currentTarget.style.background = hoverBg;
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLElement>, bg: string, shadow: string, isSmall: boolean) => {
     e.currentTarget.style.transform = 'translateY(0)';
-    e.currentTarget.style.boxShadow = `0 ${isSmall ? 4 : 6}px 0px ${shadow}, 0 4px 12px rgba(0, 0, 0, 0.2)`;
+    e.currentTarget.style.boxShadow = `0 ${isSmall ? 5 : 6}px 0px ${shadow}, 0 4px 12px rgba(0, 0, 0, 0.2)`;
     e.currentTarget.style.background = bg;
   };
 
@@ -96,21 +96,20 @@ export default function PlayPage() {
 
       {/* Background Animals */}
       <img 
-        src="/images/lion.png" 
-        alt="Lion" 
+        src="/images/octopus.png" 
+        alt="Octopus" 
         style={{ 
-          position: 'absolute', left: '2%', bottom: '5%', 
-          width: '320px', zIndex: 5, pointerEvents: 'none' 
+          position: 'absolute', right: '10%', bottom: '20%', 
+          width: '380px', zIndex: 5, pointerEvents: 'none', animation: 'octopus-float 3.2s ease-in-out infinite'
         }} 
       />
-      <img 
-        src="/images/logo.png" 
-        alt="Elephant" 
-        style={{ 
-          position: 'absolute', right: '2%', bottom: '5%', 
-          width: '380px', zIndex: 5, pointerEvents: 'none' 
-        }} 
-      />
+      <style>{`
+        @keyframes octopus-float {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-100px); }
+            100% { transform: translateY(0); }
+        }
+      `}</style>
 
       <div style={{
         paddingTop: 120,
@@ -151,6 +150,12 @@ export default function PlayPage() {
               onClick={() => { setMode('battle'); setStep('type'); }}
             >
               BATTLE
+            </button>
+            <button 
+            onClick={() => router.push('/')}
+            style={{ marginTop: 40, background: 'none', border: 'none', color: 'rgb(255, 255, 255)', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline' }}
+            >
+            Back to Home Page
             </button>
           </div>
         )}
@@ -217,6 +222,47 @@ export default function PlayPage() {
           </div>
         )}
       </div>
+        <footer
+        style={{
+            width: '100%',
+            background: 'rgba(30, 41, 59, 0.98)',
+            color: '#e0e7ef',
+            fontFamily: "'Nunito', system-ui, sans-serif",
+            fontWeight: 500,
+            fontSize: 18,
+            padding: '48px 0 40px 0',
+            marginTop: 64,
+            boxShadow: '0 -2px 16px rgba(30,41,59,0.08)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            minHeight: 220, // or higher if you want more space
+            zIndex: 20,
+            position: 'relative',
+        }}
+        >
+        <div style={{ maxWidth: 1200, width: '90%', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 24 }}>
+            <div
+            style={{
+                fontWeight: 900,
+                fontSize: 18,
+                letterSpacing: '0.5px',
+                color: '#fff',
+                marginBottom: 8,
+                fontFamily: "'Segoe UI', 'Inter', 'Oswald', sans-serif",
+            }}
+            >
+            Arcanagraph
+            </div>
+        </div>
+        <div style={{ flex: 1 }} />
+        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center', marginBottom: 4 }}>
+            Made with <span style={{ color: '#ef4444', fontSize: 18, verticalAlign: 'middle' }}>♥</span> by ...
+        </div>
+        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center' }}>
+            © 2026 Arcanagraph. All rights reserved.
+        </div>
+        </footer>
     </main>
   );
 }
