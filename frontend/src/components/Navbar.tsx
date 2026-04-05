@@ -202,7 +202,11 @@ export default function Navbar() {
                       alt={`${playerLabel} avatar`}
                       fill
                       sizes="42px"
-                      style={{ objectFit: 'cover' }}
+                      unoptimized
+                      style={{
+                        objectFit: 'cover',
+                        imageRendering: 'pixelated',
+                      }}
                     />
                   ) : null}
                 </div>

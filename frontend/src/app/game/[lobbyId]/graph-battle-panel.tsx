@@ -128,6 +128,9 @@ export function GraphBattlePanel({
   const opponentContainerRef = useRef<HTMLDivElement | null>(null);
   const opponentCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const helpButtonRef = useRef<HTMLButtonElement | null>(null);
+  const helpDialogRef = useRef<HTMLDivElement | null>(null);
+  const helpCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const gridRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
@@ -142,6 +145,7 @@ export function GraphBattlePanel({
   const nextEquationRef = useRef<() => void>(() => undefined);
   const animationFrameRef = useRef<number | null>(null);
   const timeoutIdsRef = useRef<number[]>([]);
+  const showHowToPlayRef = useRef(false);
   const familiesRef = useRef<EquationFamily[]>([]);
   const equationConfigRef = useRef<EquationConfig | null>(null);
   const [trackingStatus, setTrackingStatus] = useState("Loading graph battle...");
@@ -150,6 +154,7 @@ export function GraphBattlePanel({
   const [equationMarkup, setEquationMarkup] = useState("");
   const [localError, setLocalError] = useState("");
   const [lockedTargetId, setLockedTargetId] = useState<string | null>(null);
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
   const {
     primaryHand,
     source: primaryHandSource,
@@ -213,6 +218,84 @@ export function GraphBattlePanel({
       setTrackingStatus("Choose your primary hand to start hand tracking.");
     }
   }, [primaryHand, primaryHandReady, sessionReady]);
+
+  useEffect(() => {
+    showHowToPlayRef.current = showHowToPlay;
+  }, [showHowToPlay]);
+
+  useEffect(() => {
+    if (!showHowToPlay) {
+      return;
+    }
+
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = helpDialogRef.current;
+    const preferredFocusTarget = helpCloseButtonRef.current ?? dialog;
+
+    preferredFocusTarget?.focus();
+
+    function getFocusableElements() {
+      if (!dialog) {
+        return [];
+      }
+
+      return Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute("disabled"));
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowHowToPlay(false);
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const focusable = getFocusableElements();
+
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog?.focus();
+        return;
+      }
+
+      const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
+      const goingBackward = event.shiftKey;
+      const nextIndex =
+        currentIndex === -1
+          ? goingBackward
+            ? focusable.length - 1
+            : 0
+          : goingBackward
+            ? (currentIndex - 1 + focusable.length) % focusable.length
+            : (currentIndex + 1) % focusable.length;
+
+      event.preventDefault();
+      focusable[nextIndex]?.focus();
+    }
+
+    function restoreFocus() {
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus();
+        return;
+      }
+
+      helpButtonRef.current?.focus();
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      restoreFocus();
+    };
+  }, [showHowToPlay]);
 
   useEffect(() => {
     const video = videoRef.current!;
@@ -335,6 +418,27 @@ export function GraphBattlePanel({
       timeoutIdsRef.current = [];
     }
 
+    function registerWhenHelpClosed(action: () => void, delayMs: number) {
+      const schedule = (nextDelayMs: number) => {
+        registerTimeout(
+          window.setTimeout(() => {
+            if (cancelled) {
+              return;
+            }
+
+            if (showHowToPlayRef.current) {
+              schedule(180);
+              return;
+            }
+
+            action();
+          }, nextDelayMs),
+        );
+      };
+
+      schedule(delayMs);
+    }
+
     function resizeAttackCanvas() {
       attackLayer.width = window.innerWidth;
       attackLayer.height = window.innerHeight;
@@ -414,16 +518,14 @@ export function GraphBattlePanel({
     }
 
     function scheduleNextRound(delayMs: number) {
-      registerTimeout(
-        window.setTimeout(() => {
-          if (cancelled) {
-            return;
-          }
+      registerWhenHelpClosed(() => {
+        if (cancelled) {
+          return;
+        }
 
-          resetSession();
-          chooseNextEquation();
-        }, delayMs),
-      );
+        resetSession();
+        chooseNextEquation();
+      }, delayMs);
     }
 
     function launchAttack(score: number) {
@@ -830,6 +932,15 @@ export function GraphBattlePanel({
       }
 
       const now = performance.now();
+
+      if (showHowToPlayRef.current) {
+        openPalmDetected = false;
+        openPalmStart = 0;
+        overlayContext.clearRect(0, 0, DRAW_WIDTH, DRAW_HEIGHT);
+        animationFrameRef.current = window.requestAnimationFrame(detect);
+        return;
+      }
+
       updateAndDrawAttack();
 
       if (
@@ -932,42 +1043,38 @@ export function GraphBattlePanel({
           setLockedTargetId(targetUserId);
           // Launch attack after 900ms delay to let the count-up animation finish first,
           // matching the original computervision/index.html timing.
-          registerTimeout(
-            window.setTimeout(() => {
-              if (cancelled) {
-                return;
-              }
+          registerWhenHelpClosed(() => {
+            if (cancelled) {
+              return;
+            }
 
-              launchAttack(score.total);
-            }, 900),
-          );
-          registerTimeout(
-            window.setTimeout(() => {
-              if (!targetUserId || cancelled) {
-                return;
-              }
+            launchAttack(score.total);
+          }, 900);
+          registerWhenHelpClosed(() => {
+            if (cancelled) {
+              return;
+            }
 
-              void onSuccessfulScoreRef
-                .current(targetUserId, score.total)
-                .then(() => {
-                  if (!cancelled) {
-                    setLocalError("");
-                    setTrackingStatus(
-                      `Graph cast landed on ${targetName} with a ${score.total}% score.`,
-                    );
-                  }
-                })
-                .catch((error: unknown) => {
-                  if (!cancelled) {
-                    setLocalError(
-                      error instanceof Error
-                        ? error.message
-                        : "The graph score could not be applied to the match.",
-                    );
-                  }
-                });
-            }, 900),
-          );
+            void onSuccessfulScoreRef
+              .current(targetUserId, score.total)
+              .then(() => {
+                if (!cancelled) {
+                  setLocalError("");
+                  setTrackingStatus(
+                    `Graph cast landed on ${targetName} with a ${score.total}% score.`,
+                  );
+                }
+              })
+              .catch((error: unknown) => {
+                if (!cancelled) {
+                  setLocalError(
+                    error instanceof Error
+                      ? error.message
+                      : "The graph score could not be applied to the match.",
+                  );
+                }
+              });
+          }, 900);
         } else if (score.total >= 50 && !selectedTargetIdRef.current) {
           setLocalError("Choose an opponent first so your next passing graph can deal damage.");
         } else if (score.total >= 50 && disabledRef.current) {
@@ -1464,6 +1571,15 @@ export function GraphBattlePanel({
           <h2>{solo ? "Trace the equation to score points" : "Trace the equation to cast damage"}</h2>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            type="button"
+            className={styles.helpButton}
+            aria-label="How to play"
+            ref={helpButtonRef}
+            onClick={() => setShowHowToPlay(true)}
+          >
+            ?
+          </button>
           {primaryHand ? (
             <span className={styles.state}>
               Tracking {formatPrimaryHandLabel(primaryHand)}
@@ -1665,6 +1781,87 @@ export function GraphBattlePanel({
           {localError ? <p className={styles.error}>{localError}</p> : null}
         </>
       )}
+
+      {showHowToPlay ? (
+        <div
+          className={styles.modalBackdrop}
+          role="presentation"
+          onClick={() => setShowHowToPlay(false)}
+        >
+          <div
+            className={styles.modalCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="graph-battle-help-title"
+            tabIndex={-1}
+            ref={helpDialogRef}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.label}>How To Play</p>
+                <h2 id="graph-battle-help-title">Use simple hand shapes to cast</h2>
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseButton}
+                aria-label="Close how to play"
+                ref={helpCloseButtonRef}
+                onClick={() => setShowHowToPlay(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            <p className={styles.copy}>
+              Keep your chosen hand in view of the camera. The game only listens to
+              a few gestures while you trace.
+            </p>
+
+            <div className={styles.helpStepGrid}>
+              <article className={styles.helpStepCard}>
+                <div className={styles.helpStepIcon} aria-hidden="true">
+                  ☝️
+                </div>
+                <div className={styles.helpStepBody}>
+                  <strong>Point with your index finger to draw</strong>
+                  <p className={styles.muted}>
+                    Trace the graph with one pointed index finger. That is the only
+                    hand shape that adds to your drawing path.
+                  </p>
+                </div>
+              </article>
+
+              <article className={styles.helpStepCard}>
+                <div className={styles.helpStepIconGroup} aria-hidden="true">
+                  <span className={styles.helpStepIcon}>✊</span>
+                  <span className={styles.helpStepIcon}>✌️</span>
+                </div>
+                <div className={styles.helpStepBody}>
+                  <strong>Fists and peace signs do nothing</strong>
+                  <p className={styles.muted}>
+                    If your hand is closed or making a peace sign, the game ignores
+                    it. Those shapes will not draw and will not submit your answer.
+                  </p>
+                </div>
+              </article>
+
+              <article className={styles.helpStepCard}>
+                <div className={styles.helpStepIcon} aria-hidden="true">
+                  🖐️
+                </div>
+                <div className={styles.helpStepBody}>
+                  <strong>Show an open palm to finish</strong>
+                  <p className={styles.muted}>
+                    Turn your palm toward the camera when you are done drawing. That
+                    starts grading and tells the game to score your trace.
+                  </p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
