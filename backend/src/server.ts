@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { Server as SocketIOServer } from "socket.io";
 import { config } from "./config";
+import { getFirebaseAdminSummary, pingFirebaseAdmin } from "./firebaseAdmin";
 import {
   requireAttackScore,
   requireLobbyId,
@@ -148,6 +149,33 @@ function createApp() {
   app.get("/api/health", async (_request, response) => {
     await pingDatabase();
     response.json({ ok: true });
+  });
+
+  app.get("/api/auth/target", async (_request, response) => {
+    const firebase = getFirebaseAdminSummary();
+
+    try {
+      await pingFirebaseAdmin();
+      response.json({
+        ok: true,
+        firebase: {
+          mode: firebase.mode,
+          projectId: firebase.projectId,
+          reachable: true,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to verify backend Firebase target", error);
+      response.status(503).json({
+        ok: false,
+        error: "Backend cannot reach the configured Firebase auth target right now.",
+        firebase: {
+          mode: firebase.mode,
+          projectId: firebase.projectId,
+          reachable: false,
+        },
+      });
+    }
   });
 
   app.post("/api/auth/session", async (request, response) => {
@@ -426,7 +454,11 @@ async function start() {
   registerLobbySockets(io);
 
   server.listen(config.port, () => {
+    const firebase = getFirebaseAdminSummary();
     console.log(`Backend listening on http://localhost:${config.port}`);
+    console.log(
+      `Firebase admin target: ${firebase.mode === "emulator" ? `emulator (${firebase.emulatorHost})` : `project ${firebase.projectId}`} via ${firebase.credentialSource}`,
+    );
   });
 }
 

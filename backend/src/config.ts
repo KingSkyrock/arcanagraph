@@ -38,10 +38,13 @@ export const config = {
   databaseUrl: readRequiredString("DATABASE_URL"),
   sessionCookieName: readString("SESSION_COOKIE_NAME", "arcanagraph_session"),
   sessionExpiresDays: readNumber("SESSION_EXPIRES_DAYS", 5),
-  firebaseProjectId: readString("FIREBASE_PROJECT_ID", "arcanagraph-dev"),
+  firebaseProjectId: readString("FIREBASE_PROJECT_ID"),
   firebaseAuthEmulatorHost: readString("FIREBASE_AUTH_EMULATOR_HOST"),
   firebaseClientEmail: readString("FIREBASE_CLIENT_EMAIL"),
   firebasePrivateKey: readString("FIREBASE_PRIVATE_KEY").replace(/\\n/g, "\n"),
+  firebaseServiceAccountJson: readString("FIREBASE_SERVICE_ACCOUNT_JSON"),
+  firebaseServiceAccountJsonBase64: readString("FIREBASE_SERVICE_ACCOUNT_JSON_BASE64"),
+  googleApplicationCredentialsPath: readString("GOOGLE_APPLICATION_CREDENTIALS"),
   nodeEnv: readString("NODE_ENV", "development"),
 };
 
