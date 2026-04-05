@@ -14,6 +14,10 @@ export const metadata: Metadata = {
     template: "%s | Arcanagraph",
   },
   description: "Draw math functions in the air to cast spells and battle your friends.",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
