@@ -41,9 +41,10 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 type PlayClientProps = {
   autoCreateWithDifficulty?: string | null;
   joinInviteCode?: string;
+  onClose?: () => void;
 };
 
-export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayClientProps) {
+export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }: PlayClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeLobbyId = searchParams.get("lobby");
@@ -493,6 +494,13 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayCli
               {lobby.state === "in_game" ? (
                 <Link href={`/game/${lobby.id}`} style={ghostBtn}>Open game</Link>
               ) : null}
+              <button
+                type="button"
+                style={{ ...ghostBtn, color: '#fca5a5', borderColor: 'rgba(252,165,165,0.3)' }}
+                onClick={() => { setLobby(null); setError(''); if (onClose) onClose(); else router.replace('/play'); }}
+              >
+                Close Lobby
+              </button>
             </div>
 
             <ol style={{ display: 'grid', gap: 12, padding: 0, listStyle: 'none' }}>
@@ -514,9 +522,18 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayCli
             </ol>
           </>
         ) : (
-          <p style={{ fontSize: 16, lineHeight: 1.7, color: 'rgba(255,255,255,0.84)' }}>
-            Creating your lobby...
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <p style={{ fontSize: 16, lineHeight: 1.7, color: 'rgba(255,255,255,0.84)' }}>
+              Creating your lobby...
+            </p>
+            <button
+              type="button"
+              style={{ ...ghostBtn, color: '#fca5a5', borderColor: 'rgba(252,165,165,0.3)', alignSelf: 'flex-start' }}
+              onClick={() => { setLobby(null); setError(''); if (onClose) onClose(); else router.replace('/play'); }}
+            >
+              Cancel
+            </button>
+          </div>
         )}
     </div>
   );

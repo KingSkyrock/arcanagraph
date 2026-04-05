@@ -51,6 +51,7 @@ export default function PlayPage() {
   const [customLoading, setCustomLoading] = useState(false);
   const [customError, setCustomError] = useState('');
   const [difficulty, setDifficulty] = useState<string | null>(null);
+  const [joinCode, setJoinCode] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -192,7 +193,11 @@ export default function PlayPage() {
             Back to Mode Selection
           </button>
           <Suspense fallback={<div style={{ textAlign: 'center', fontWeight: 700, padding: 48 }}>Loading lobby tools...</div>}>
-            <PlayClient autoCreateWithDifficulty={difficulty} />
+            <PlayClient
+              autoCreateWithDifficulty={difficulty}
+              joinInviteCode={joinCode || undefined}
+              onClose={() => { setDifficulty(null); setJoinCode(''); setStep('createOrJoin'); }}
+            />
           </Suspense>
         </div>
       </main>
@@ -262,7 +267,7 @@ export default function PlayPage() {
               onMouseLeave={e => handleMouseLeave(e, 'rgb(241, 116, 88)', 'rgb(234, 61, 22)', false)}
               onMouseDown={e => handleMouseDown(e, 'rgb(241, 116, 88)')}
               onMouseUp={e => handleMouseEnter(e, 'rgb(241, 116, 88)', false, 'rgb(234, 61, 22)')}
-              onClick={() => { setMode('battle'); setStep('type'); }}
+              onClick={() => { setMode('battle'); setStep('createOrJoin'); }}
             >
               BATTLE
             </button>
@@ -271,6 +276,67 @@ export default function PlayPage() {
             style={{ marginTop: 40, background: 'none', border: 'none', color: 'rgb(255, 255, 255)', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline' }}
             >
             Back to Home Page
+            </button>
+          </div>
+        )}
+
+        {step === 'createOrJoin' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32, alignItems: 'center', width: '100%' }}>
+            <h2 style={{
+              fontWeight: 900,
+              fontSize: 48, color: 'rgb(255, 255, 255)', marginBottom: 20
+            }}>Battle Mode</h2>
+
+            <button
+              style={getLegoStyle('rgb(34, 197, 94)', 'rgb(21, 128, 61)')}
+              onMouseEnter={e => handleMouseEnter(e, 'rgb(21, 128, 61)', false, 'rgb(22, 163, 74)')}
+              onMouseLeave={e => handleMouseLeave(e, 'rgb(34, 197, 94)', 'rgb(21, 128, 61)', false)}
+              onMouseDown={e => handleMouseDown(e, 'rgb(21, 128, 61)')}
+              onMouseUp={e => handleMouseEnter(e, 'rgb(21, 128, 61)', false, 'rgb(22, 163, 74)')}
+              onClick={() => setStep('type')}
+            >
+              CREATE LOBBY
+            </button>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, width: '100%', maxWidth: 380 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%' }}>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.24)' }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>or join with code</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.24)' }} />
+              </div>
+              <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                <input
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="INVITE CODE"
+                  maxLength={6}
+                  style={{
+                    flex: 1, minHeight: 52, padding: '0 16px',
+                    border: '1px solid rgba(255,255,255,0.24)', borderRadius: 16,
+                    background: 'rgba(255,255,255,0.14)', color: '#fff',
+                    fontWeight: 700, fontSize: 18, textTransform: 'uppercase',
+                    textAlign: 'center', letterSpacing: '0.15em',
+                  }}
+                />
+                <button
+                  style={{ ...getLegoStyle('rgb(241, 116, 88)', 'rgb(234, 61, 22)', true), minWidth: 100 }}
+                  onMouseEnter={e => handleMouseEnter(e, 'rgb(234, 61, 22)', true, 'rgb(200, 50, 18)')}
+                  onMouseLeave={e => handleMouseLeave(e, 'rgb(241, 116, 88)', 'rgb(234, 61, 22)', true)}
+                  onMouseDown={e => handleMouseDown(e, 'rgb(234, 61, 22)')}
+                  onMouseUp={e => handleMouseEnter(e, 'rgb(234, 61, 22)', true, 'rgb(200, 50, 18)')}
+                  disabled={joinCode.trim().length < 4}
+                  onClick={() => { setStep('lobby'); }}
+                >
+                  JOIN
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => { setStep('mode'); setMode(null); }}
+              style={{ marginTop: 20, background: 'none', border: 'none', color: 'rgb(255, 255, 255)', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline' }}
+            >
+              Back to Mode Selection
             </button>
           </div>
         )}
@@ -339,10 +405,10 @@ export default function PlayPage() {
             ) : null}
 
             <button
-              onClick={() => { setStep('mode'); setMode(null); }}
+              onClick={() => { if (mode === 'battle') { setStep('createOrJoin'); } else { setStep('mode'); setMode(null); } }}
               style={{ marginTop: 40, background: 'none', border: 'none', color: 'rgb(255, 255, 255)', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline' }}
             >
-              Back to Mode Selection
+              {mode === 'battle' ? 'Back to Create or Join' : 'Back to Mode Selection'}
             </button>
           </div>
         )}
