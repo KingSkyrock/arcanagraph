@@ -76,22 +76,20 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayCli
     socket.on("connect", () => {
       setSocketConnected(true);
       setStatus((currentStatus) =>
-        currentStatus.includes("Signed in") ? currentStatus : "Socket connected.",
+        currentStatus.includes("Signed in") ? currentStatus : "Connected.",
       );
     });
 
     socket.on("disconnect", () => {
       setSocketConnected(false);
-      setStatus("Socket offline. Reconnecting to lobby updates...");
+      setStatus("Connection lost. Reconnecting...");
     });
 
     socket.on("connect_error", (connectError) => {
       console.error(connectError);
       setSocketConnected(false);
       setError(
-        connectError.message
-          ? `Unable to connect to the lobby server: ${connectError.message}`
-          : "Unable to connect to the lobby server.",
+        "Unable to connect to the game server. Please try again.",
       );
     });
 
@@ -213,7 +211,7 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayCli
       setStatus(`Signed in as ${payload.user.displayName || payload.user.email || "player"}.`);
     } catch (loadError) {
       console.error(loadError);
-      setStatus("Backend unavailable. Start the frontend, backend, and Postgres first.");
+      setStatus("Game server is unavailable right now. Please try again later.");
       setError(
         loadError instanceof Error ? loadError.message : "Could not verify your player session.",
       );
@@ -246,7 +244,7 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayCli
     const socket = socketRef.current;
 
     if (!socket || !socket.connected) {
-      return { ok: false, error: "Socket connection is not ready yet." } satisfies SocketResult;
+      return { ok: false, error: "Still connecting to the game server. Try again in a moment." } satisfies SocketResult;
     }
 
     return await new Promise<SocketResult>((resolve) => {
@@ -300,7 +298,7 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayCli
 
   async function handleJoinLobby() {
     if (!socketConnected) {
-      setError("Waiting for the realtime lobby connection. Try joining again in a moment.");
+      setError("Still connecting to the game server. Try again in a moment.");
       return;
     }
 
@@ -449,14 +447,23 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayCli
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {lobby ? <span style={pillStyle}>{difficultyLabel}</span> : null}
-          <span style={pillStyle}>{socketConnected ? "Socket online" : "Socket offline"}</span>
+          <span style={pillStyle}>{socketConnected ? "Connected" : "Connecting..."}</span>
         </div>
       </div>
 
       <div style={{ display: 'grid', gap: 10, padding: 18, borderRadius: 22, background: 'rgba(255,255,255,0.14)' }}>
         <p style={labelStyle}>Status</p>
         <strong style={{ fontSize: 20, lineHeight: 1.35 }}>{status}</strong>
-        {error ? <p style={{ color: '#fca5a5', fontSize: 14 }}>{error}</p> : null}
+        {error ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <p style={{ color: '#fca5a5', fontSize: 14, flex: 1 }}>{error}</p>
+            <button type="button" style={{
+              ...ghostBtn, minHeight: 36, padding: '0 14px', fontSize: 13,
+            }} onClick={() => { setError(''); void loadSession(); }}>
+              Retry
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {lobby ? (

@@ -143,18 +143,22 @@ export function GraphBattlePanel({
   const soloRef = useRef(solo);
   const soloSkillFamilyRef = useRef<string | null>(soloSkillFamily);
   const resetSessionRef = useRef<() => void>(() => undefined);
+  const reinitCameraRef = useRef<() => void>(() => undefined);
   const nextEquationRef = useRef<() => void>(() => undefined);
   const animationFrameRef = useRef<number | null>(null);
   const timeoutIdsRef = useRef<number[]>([]);
   const showHowToPlayRef = useRef(false);
   const familiesRef = useRef<EquationFamily[]>([]);
   const equationConfigRef = useRef<EquationConfig | null>(null);
-  const [trackingStatus, setTrackingStatus] = useState("Loading graph battle...");
+  const [trackingStatus, setTrackingStatus] = useState("Setting up...");
   const [cameraBlocked, setCameraBlocked] = useState(false);
   const [scoreDisplay, setScoreDisplay] = useState("");
   const [equationMarkup, setEquationMarkup] = useState("");
   const [localError, setLocalError] = useState("");
   const [lockedTargetId, setLockedTargetId] = useState<string | null>(null);
+  const [learnMode, setLearnMode] = useState(Boolean(solo));
+  const learnModeRef = useRef(Boolean(solo));
+  const redrawGridRef = useRef<() => void>(() => undefined);
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const {
     primaryHand,
@@ -397,6 +401,65 @@ export function GraphBattlePanel({
     const DEBOUNCE_MS = 125;
     const TRIM_LOOKBACK_MS = 60;
     const EMA_ALPHA = 0.4;
+
+    // --- Smoothing toggle: "ema" or "oneEuro" ---
+    const SMOOTHING_MODE: "ema" | "oneEuro" = "oneEuro";
+
+    // One Euro Filter — speed-adaptive smoothing
+    // slow movement = heavy smoothing, fast movement = light smoothing
+    class OneEuroFilter {
+      private minCutoff: number;
+      private beta: number;
+      private dCutoff: number;
+      private xPrev: number | null = null;
+      private dxPrev: number = 0;
+      private tPrev: number = 0;
+
+      constructor(minCutoff = 1.0, beta = 0.007, dCutoff = 1.0) {
+        this.minCutoff = minCutoff;
+        this.beta = beta;
+        this.dCutoff = dCutoff;
+      }
+
+      private alpha(cutoff: number, dt: number) {
+        const tau = 1.0 / (2 * Math.PI * cutoff);
+        return 1.0 / (1.0 + tau / dt);
+      }
+
+      filter(x: number, t: number): number {
+        if (this.xPrev === null) {
+          this.xPrev = x;
+          this.tPrev = t;
+          return x;
+        }
+        const dt = Math.max((t - this.tPrev) / 1000, 0.001); // seconds
+        this.tPrev = t;
+
+        // estimate speed
+        const dx = (x - this.xPrev) / dt;
+        const aD = this.alpha(this.dCutoff, dt);
+        const dxSmoothed = aD * dx + (1 - aD) * this.dxPrev;
+        this.dxPrev = dxSmoothed;
+
+        // adaptive cutoff based on speed
+        const cutoff = this.minCutoff + this.beta * Math.abs(dxSmoothed);
+        const a = this.alpha(cutoff, dt);
+        const xFiltered = a * x + (1 - a) * this.xPrev;
+        this.xPrev = xFiltered;
+        return xFiltered;
+      }
+
+      reset() {
+        this.xPrev = null;
+        this.dxPrev = 0;
+        this.tPrev = 0;
+      }
+    }
+
+    const oneEuroFilters: Record<HandLabel, { x: OneEuroFilter; y: OneEuroFilter }> = {
+      Left: { x: new OneEuroFilter(), y: new OneEuroFilter() },
+      Right: { x: new OneEuroFilter(), y: new OneEuroFilter() },
+    };
     const MIN_POINT_DIST = 4;
     const TRAIL_TIMEOUT_MS = 500;
     const FAST_THRESHOLD = 300;
@@ -454,7 +517,16 @@ export function GraphBattlePanel({
         }),
       );
       drawGrid(gridContext);
-      drawGroundTruth(gridContext, config);
+      if (learnModeRef.current) {
+        drawGroundTruth(gridContext, config);
+      }
+    }
+
+    function redrawCurrentGrid() {
+      drawGrid(gridContext);
+      if (learnModeRef.current && equationConfigRef.current) {
+        drawGroundTruth(gridContext, equationConfigRef.current);
+      }
     }
 
     function chooseNextEquation() {
@@ -475,7 +547,7 @@ export function GraphBattlePanel({
               renderEquation(config);
               setScoreDisplay("");
             } else {
-              setLocalError("Could not load equation from server. Try clicking New Equation.");
+              setLocalError("Could not load a new equation. Try clicking New Equation.");
             }
           },
         );
@@ -516,6 +588,8 @@ export function GraphBattlePanel({
       stableDrawing[label] = false;
       trailHistory[label] = [];
       smoothed[label] = null;
+      oneEuroFilters[label].x.reset();
+      oneEuroFilters[label].y.reset();
       lastTrailPoint[label] = null;
       lastTrailTime[label] = 0;
       lastPos[label] = null;
@@ -1100,7 +1174,7 @@ export function GraphBattlePanel({
                   setLocalError(
                     error instanceof Error
                       ? error.message
-                      : "The graph score could not be applied to the match.",
+                      : "Your spell failed to connect. Try again!",
                   );
                 }
               });
@@ -1142,6 +1216,22 @@ export function GraphBattlePanel({
       const handsPresent: Record<HandLabel, boolean> = { Left: false, Right: false };
 
       if (results.landmarks) {
+        // filter out background hands: if multiple hands detected, keep only the largest
+        // hand size = 2D distance from wrist (0) to middle MCP (9)
+        let bestHandIndex = -1;
+        let bestHandSize = 0;
+
+        for (let handIndex = 0; handIndex < results.landmarks.length; handIndex += 1) {
+          const label = results.handednesses[handIndex]?.[0]?.categoryName;
+          if (label !== trackedHand) continue;
+          const lm = results.landmarks[handIndex]!;
+          const size = dist(lm[0]!, lm[9]!);
+          if (size > bestHandSize) {
+            bestHandSize = size;
+            bestHandIndex = handIndex;
+          }
+        }
+
         for (let handIndex = 0; handIndex < results.landmarks.length; handIndex += 1) {
           const label = results.handednesses[handIndex]?.[0]?.categoryName as HandLabel | undefined;
 
@@ -1149,7 +1239,8 @@ export function GraphBattlePanel({
             continue;
           }
 
-          if (label !== trackedHand) {
+          // skip non-tracked hand or smaller duplicate hands
+          if (label !== trackedHand || (label === trackedHand && handIndex !== bestHandIndex)) {
             if (wasDrawing[label]) {
               trails[label].push(null);
             }
@@ -1164,11 +1255,16 @@ export function GraphBattlePanel({
           let x = landmarks[8]!.x * VIDEO_WIDTH - DRAW_OFFSET_X;
           let y = landmarks[8]!.y * VIDEO_HEIGHT - DRAW_OFFSET_Y;
 
-          if (smoothed[label]) {
-            x = smoothed[label]!.x + EMA_ALPHA * (x - smoothed[label]!.x);
-            y = smoothed[label]!.y + EMA_ALPHA * (y - smoothed[label]!.y);
+          // smoothing: toggle between EMA and One Euro Filter
+          if (SMOOTHING_MODE === "oneEuro") {
+            x = oneEuroFilters[label].x.filter(x, now);
+            y = oneEuroFilters[label].y.filter(y, now);
+          } else {
+            if (smoothed[label]) {
+              x = smoothed[label]!.x + EMA_ALPHA * (x - smoothed[label]!.x);
+              y = smoothed[label]!.y + EMA_ALPHA * (y - smoothed[label]!.y);
+            }
           }
-
           smoothed[label] = { x, y };
           const inBounds = x >= -20 && x <= 660 && y >= -20 && y <= 500;
           const inDrawArea = x >= 0 && x <= DRAW_WIDTH && y >= 0 && y <= DRAW_HEIGHT;
@@ -1385,7 +1481,7 @@ export function GraphBattlePanel({
 
     async function init() {
       try {
-        setTrackingStatus("Loading graph equations...");
+        setTrackingStatus("Loading equations...");
         const equationResponse = await fetch(apiUrl("/data/advanced_equations.csv"), {
           credentials: "include",
         });
@@ -1394,7 +1490,7 @@ export function GraphBattlePanel({
 
         if (!equationResponse.ok) {
           throw new Error(
-            `Could not load graph equations (${equationResponse.status}). The battle prompts are unavailable right now.`,
+            "Could not load equations. Please refresh and try again.",
           );
         }
 
@@ -1403,7 +1499,7 @@ export function GraphBattlePanel({
 
         if (!families.length) {
           throw new Error(
-            "The graph equation bank is empty. Check data/advanced_equations.csv and try again.",
+            "No equations available. Please refresh and try again.",
           );
         }
 
@@ -1413,7 +1509,7 @@ export function GraphBattlePanel({
 
         if (cancelled) return;
 
-        setTrackingStatus("Loading MediaPipe hand tracking...");
+        setTrackingStatus("Loading hand tracking...");
 
         const visionModule = await import("@mediapipe/tasks-vision");
         if (cancelled) return;
@@ -1443,7 +1539,7 @@ export function GraphBattlePanel({
         });
         if (cancelled) { gestureRecognizer.close(); gestureRecognizer = null; return; }
 
-        setTrackingStatus("MediaPipe loaded. Starting camera...");
+        setTrackingStatus("Hand tracking ready. Starting camera...");
         await startCamera();
 
         if (!cancelled) {
@@ -1462,7 +1558,7 @@ export function GraphBattlePanel({
               ? "Camera access was denied. Click the button above to try again."
               : msg || "The graph battle camera could not be initialized.",
           );
-          setTrackingStatus("Graph battle is offline.");
+          setTrackingStatus("Could not start. Please refresh and try again.");
         }
       }
     }
@@ -1471,6 +1567,42 @@ export function GraphBattlePanel({
     nextEquationRef.current = () => {
       resetSession();
       chooseNextEquation();
+    };
+    redrawGridRef.current = redrawCurrentGrid;
+    reinitCameraRef.current = () => {
+      // Full teardown before re-init
+      cancelled = true;
+      clearRegisteredTimeouts();
+
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+
+      handLandmarker?.close();
+      handLandmarker = null;
+      gestureRecognizer?.close();
+      gestureRecognizer = null;
+
+      for (const track of stream?.getTracks() ?? []) {
+        track.stop();
+      }
+      stream = null;
+      runtimeVideo.srcObject = null;
+
+      // Reset state and re-run
+      cancelled = false;
+      lastVideoTime = -1;
+      openPalmDetected = false;
+      openPalmStart = 0;
+      palmScored = false;
+      gestureFrameCount = 0;
+      resetSession();
+
+      setCameraBlocked(false);
+      setLocalError("");
+      setTrackingStatus("Retrying...");
+      void init();
     };
 
     resizeAttackCanvas();
@@ -1624,27 +1756,9 @@ export function GraphBattlePanel({
             <button
               type="button"
               className={styles.linkButton}
-              onClick={async () => {
-                try {
-                  const s = await navigator.mediaDevices.getUserMedia({ video: { width: DRAW_WIDTH, height: DRAW_HEIGHT } });
-                  const v = videoRef.current;
-                  if (v) {
-                    v.srcObject = s;
-                    await v.play();
-                    setCameraBlocked(false);
-                    setLocalError("");
-                    setTrackingStatus(
-                      primaryHand
-                        ? `Tracking your ${formatPrimaryHandLabel(primaryHand).toLowerCase()}. Draw with your index finger, then hold an open palm to grade.`
-                        : "Camera connected. Choose your primary hand to start tracking.",
-                    );
-                  }
-                } catch {
-                  setLocalError("Camera access was denied. Check your browser permissions and try again.");
-                }
-              }}
+              onClick={() => reinitCameraRef.current()}
             >
-              Enable Camera
+              Retry Camera
             </button>
           ) : null}
           {!solo && (
@@ -1802,6 +1916,37 @@ export function GraphBattlePanel({
             <span className={styles.scoreDisplay}>{scoreDisplay || "Score: waiting for trace"}</span>
           </div>
 
+          {solo ? (
+            <div className={styles.cvLearnToggle}>
+              <label className={styles.toggleLabel}>
+                <span>Learn Mode</span>
+                <button
+                  type="button"
+                  className={styles.toggleSwitch}
+                  role="switch"
+                  aria-checked={learnMode}
+                  onClick={() => {
+                    const next = !learnMode;
+                    setLearnMode(next);
+                    learnModeRef.current = next;
+                    redrawGridRef.current();
+                  }}
+                >
+                  <span
+                    className={styles.toggleKnob}
+                    style={{ transform: learnMode ? "translateX(20px)" : "translateX(0)" }}
+                  />
+                </button>
+              </label>
+              <span className={styles.learnInfo}>
+                i
+                <span className={styles.learnTooltip}>
+                  ON: the correct graph is shown as a guide while you trace. OFF: you draw from the equation alone.
+                </span>
+              </span>
+            </div>
+          ) : null}
+
           <p className={styles.muted}>
             {solo && isSoloGuestPlayer(currentPlayer)
               ? `${trackingStatus} Practicing as ${formatPlayerName(currentPlayer)}.`
@@ -1809,6 +1954,12 @@ export function GraphBattlePanel({
           </p>
           {primaryHandError ? <p className={styles.error}>{primaryHandError}</p> : null}
           {localError ? <p className={styles.error}>{localError}</p> : null}
+          {cameraBlocked ? (
+            <p className={styles.muted} style={{ fontSize: 13, lineHeight: 1.5 }}>
+              Make sure your browser has camera permission enabled.
+              On macOS, check System Settings &gt; Privacy &amp; Security &gt; Camera.
+            </p>
+          ) : null}
         </>
       )}
 

@@ -253,9 +253,8 @@ export default function SettingsPage() {
 
           {error ? <p className={sharedStyles.error}>{error}</p> : null}
           <p className={sharedStyles.muted}>
-            Reach goal: the current setting is single-hand only so the battle
-            system has one clear tracked input today. We can extend this into a
-            two-handed mode later without replacing this page.
+            Arcanagraph tracks a single hand during battle. Choose which hand
+            you draw with so the game can ignore the other one.
           </p>
         </section>
 

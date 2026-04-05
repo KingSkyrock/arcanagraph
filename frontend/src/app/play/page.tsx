@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import { apiUrl } from '@/lib/api';
 import Navbar from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
 import {
   formatSkillFamilyLabel,
   listSkillFamilies,
@@ -211,7 +212,8 @@ export default function PlayPage() {
       {/* Background Animals */}
       <img 
         src="/images/octopus.png" 
-        alt="Octopus" 
+        alt=""
+        aria-hidden="true" 
         style={{ 
           position: 'absolute', right: '10%', bottom: '20%', 
           width: '380px', zIndex: 5, pointerEvents: 'none', animation: 'octopus-float 3.2s ease-in-out infinite'
@@ -411,47 +413,7 @@ export default function PlayPage() {
           </div>
         )}
       </div>
-        <footer
-        style={{
-            width: '100%',
-            background: 'rgba(30, 41, 59, 0.98)',
-            color: '#e0e7ef',
-            fontFamily: "'Nunito', system-ui, sans-serif",
-            fontWeight: 500,
-            fontSize: 18,
-            padding: '48px 0 40px 0',
-            marginTop: 64,
-            boxShadow: '0 -2px 16px rgba(30,41,59,0.08)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            minHeight: 220, // or higher if you want more space
-            zIndex: 20,
-            position: 'relative',
-        }}
-        >
-        <div style={{ maxWidth: 1200, width: '90%', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 24 }}>
-            <div
-            style={{
-                fontWeight: 900,
-                fontSize: 18,
-                letterSpacing: '0.5px',
-                color: '#fff',
-                marginBottom: 8,
-                fontFamily: "'Segoe UI', 'Inter', 'Oswald', sans-serif",
-            }}
-            >
-            Arcanagraph
-            </div>
-        </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center', marginBottom: 4 }}>
-            Made with <span style={{ color: '#ef4444', fontSize: 18, verticalAlign: 'middle' }}>♥</span> by ...
-        </div>
-        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center' }}>
-            © 2026 Arcanagraph. All rights reserved.
-        </div>
-        </footer>
+        <Footer />
     </main>
   );
 }

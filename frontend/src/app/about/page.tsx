@@ -1,4 +1,5 @@
 import Navbar from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
 
 export default function AboutPage() {
   return (
@@ -19,54 +20,28 @@ export default function AboutPage() {
             fontSize: 20,
             lineHeight: 1.6,
             color: '#334155',
-            fontFamily: "'Nunito', system-ui, sans-serif"
+            fontFamily: "'Nunito', system-ui, sans-serif",
+            marginBottom: 20,
           }}>
-            poopy poop!!!!!!!<br />
-            {/* Add more about your mission, team, etc. */}
+            Arcanagraph is a multiplayer math dueling game where players trace equations
+            in the air using hand gestures tracked by their webcam. Draw a perfect sine wave,
+            nail a parabola, or trace a cubic — the more accurate your drawing, the more
+            damage your spell deals. First player to zero HP loses.
+          </p>
+          <p style={{
+            fontSize: 20,
+            lineHeight: 1.6,
+            color: '#334155',
+            fontFamily: "'Nunito', system-ui, sans-serif",
+            marginBottom: 20,
+          }}>
+            Built for DiamondHacks 2026 by a team of four students who wanted to make
+            math feel like magic. Whether you&apos;re practicing solo or battling a friend,
+            Arcanagraph turns graphing into a fast-paced, hands-on challenge.
           </p>
         </div>
       </main>
-      <footer
-        style={{
-          width: '100%',
-          background: 'rgba(30, 41, 59, 0.98)',
-          color: '#e0e7ef',
-          fontFamily: "'Nunito', system-ui, sans-serif",
-          fontWeight: 500,
-          fontSize: 18,
-          padding: '48px 0 40px 0',
-          marginTop: 64,
-          boxShadow: '0 -2px 16px rgba(30,41,59,0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          minHeight: 220,
-          zIndex: 20,
-          position: 'relative',
-        }}
-      >
-        <div style={{ maxWidth: 1200, width: '90%', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 24 }}>
-          <div
-            style={{
-              fontWeight: 900,
-              fontSize: 18,
-              letterSpacing: '0.5px',
-              color: '#fff',
-              marginBottom: 8,
-              fontFamily: "'Segoe UI', 'Inter', 'Oswald', sans-serif",
-            }}
-          >
-            Arcanagraph
-          </div>
-        </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center', marginBottom: 4 }}>
-          Made with <span style={{ color: '#ef4444', fontSize: 18, verticalAlign: 'middle' }}>♥</span> by ...
-        </div>
-        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center' }}>
-          © 2026 Arcanagraph. All rights reserved.
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }

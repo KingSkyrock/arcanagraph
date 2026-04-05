@@ -15,6 +15,7 @@ import {
   getFirebaseClientSummary,
 } from "@/lib/firebase-client";
 import { emitSessionUserUpdated } from "@/lib/session-user-events";
+import { Skeleton } from "@/components/Skeleton";
 import type { AppUser } from "@/lib/types";
 import styles from "./page.module.css";
 
@@ -63,7 +64,7 @@ function getAuthErrorMessage(error: unknown, mode: Mode) {
     case "auth/user-not-found":
     case "auth/invalid-credential":
       return mode === "sign-in"
-        ? "No player exists for that email in the current Firebase auth target. Use Register first, or make sure you're signing into the same emulator/project."
+        ? "No account found for that email. Try registering first."
         : "That player account could not be found.";
     case "auth/email-already-in-use":
       return "That email already has a player account. Switch to Login instead.";
@@ -74,7 +75,7 @@ function getAuthErrorMessage(error: unknown, mode: Mode) {
     case "auth/weak-password":
       return "Use a password with at least 6 characters.";
     case "auth/network-request-failed":
-      return "Could not reach Firebase. Make sure the auth emulator or project is running.";
+      return "Could not connect to the login service. Please try again later.";
     default:
       return error instanceof Error ? error.message : "Authentication failed.";
   }
@@ -89,9 +90,11 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string; displayName?: string }>({});
   const [status, setStatus] = useState("Ready to sign in.");
   const [user, setUser] = useState<AppUser | null>(null);
   const [leaderboard, setLeaderboard] = useState<AppUser[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [backendFirebaseTarget, setBackendFirebaseTarget] =
     useState<HealthResponse["firebase"] | null>(null);
   const [backendFirebaseError, setBackendFirebaseError] = useState("");
@@ -111,7 +114,7 @@ export function LoginForm() {
       if (response.status === 401) {
         setUser(null);
         emitSessionUserUpdated(null);
-        setStatus("No active match session yet.");
+        setStatus("Ready to sign in.");
         return;
       }
 
@@ -127,7 +130,7 @@ export function LoginForm() {
     } catch (loadError) {
       console.error(loadError);
       emitSessionUserUpdated(null);
-      setStatus("Could not reach the game server. You can still create an account.");
+      setStatus("Game server is unreachable. You can still create an account.");
     }
   }
 
@@ -146,6 +149,8 @@ export function LoginForm() {
     } catch (loadError) {
       console.error(loadError);
       setLeaderboard([]);
+    } finally {
+      setLeaderboardLoading(false);
     }
   }
 
@@ -179,9 +184,22 @@ export function LoginForm() {
     event.preventDefault();
 
     if (!firebaseConfigReady()) {
-      setError("Missing Firebase frontend env vars.");
+      setError("Login is not configured yet. Please contact the team.");
       return;
     }
+
+    const errors: typeof fieldErrors = {};
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = "Enter a valid email address.";
+    }
+    if (password.length < 6) {
+      errors.password = "Password must be at least 6 characters.";
+    }
+    if (mode === "create-account" && !displayName.trim()) {
+      errors.displayName = "Choose a display name.";
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setLoading(true);
     setError("");
@@ -214,7 +232,7 @@ export function LoginForm() {
       const payload = await readJson<SessionResponse>(response);
 
       if (!response.ok || !payload.user) {
-        throw new Error(payload.error || "Could not create backend session.");
+        throw new Error(payload.error || "Unable to finish sign-in because your player profile could not be saved right now.");
       }
 
       setUser(payload.user);
@@ -300,7 +318,7 @@ export function LoginForm() {
     <div className={styles.panel}>
       <div className={styles.panelHeader}>
         <div>
-          <p className={styles.panelLabel}>Firebase + Express</p>
+          <p className={styles.panelLabel}>Arcanagraph</p>
           <h2>{mode === "sign-in" ? "Sign in" : "Create player"}</h2>
         </div>
         <div className={styles.modeSwitch}>
@@ -327,9 +345,11 @@ export function LoginForm() {
             <span>Display name</span>
             <input
               value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
+              onChange={(event) => { setDisplayName(event.target.value); setFieldErrors(e => ({ ...e, displayName: undefined })); }}
               placeholder="ArcaneRival"
+              style={fieldErrors.displayName ? { borderColor: '#fca5a5' } : undefined}
             />
+            {fieldErrors.displayName ? <small className={styles.fieldError}>{fieldErrors.displayName}</small> : null}
           </label>
         ) : null}
 
@@ -337,38 +357,41 @@ export function LoginForm() {
           <span>Email</span>
           <input
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => { setEmail(event.target.value); setFieldErrors(e => ({ ...e, email: undefined })); }}
             type="email"
             autoComplete="email"
             placeholder="mage@example.com"
-            required
+            style={fieldErrors.email ? { borderColor: '#fca5a5' } : undefined}
           />
+          {fieldErrors.email ? <small className={styles.fieldError}>{fieldErrors.email}</small> : null}
         </label>
 
         <label className={styles.field}>
           <span>Password</span>
           <input
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => { setPassword(event.target.value); setFieldErrors(e => ({ ...e, password: undefined })); }}
             type="password"
             autoComplete="current-password"
             placeholder="At least 6 characters"
+            style={fieldErrors.password ? { borderColor: '#fca5a5' } : undefined}
             minLength={6}
             required
           />
+          {fieldErrors.password ? <small className={styles.fieldError}>{fieldErrors.password}</small> : null}
         </label>
 
         <button className={styles.submit} type="submit" disabled={loading}>
           {loading
             ? "Working..."
             : mode === "sign-in"
-              ? "Start Session"
+              ? "Sign In"
               : "Create Account"}
         </button>
       </form>
 
       <div className={styles.statusCard}>
-        <p className={styles.statusLabel}>Session</p>
+        <p className={styles.statusLabel}>Account</p>
         <strong>{status}</strong>
         {user ? (
           <div className={styles.record}>
@@ -396,35 +419,23 @@ export function LoginForm() {
         ) : null}
       </div>
 
-      <div className={styles.statusCard}>
-        <p className={styles.statusLabel}>Firebase target</p>
-        <div className={styles.targetGrid}>
-          <div className={styles.targetCard}>
-            <span>Frontend auth</span>
-            <strong>{frontendTargetLabel}</strong>
-            <small>{frontendTargetMeta}</small>
-          </div>
-          <div className={styles.targetCard}>
-            <span>Backend session</span>
-            <strong>{backendTargetLabel}</strong>
-            <small>{backendTargetMeta}</small>
-          </div>
-        </div>
-        {firebaseTargetsMatch === false ? (
-          <p className={styles.error}>
-            Frontend and backend Firebase targets do not match yet. Login will fail until both
-            point at the same project or emulator.
-          </p>
-        ) : null}
-      </div>
-
       <div className={styles.leaderboard}>
         <div className={styles.leaderboardHeader}>
           <p className={styles.panelLabel}>Leaderboard</p>
           <span>Rank / XP / Record</span>
         </div>
 
-        {leaderboard.length ? (
+        {leaderboardLoading ? (
+          <div style={{ display: 'grid', gap: 12, padding: '12px 0' }}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '0 4px' }}>
+                <Skeleton width={28} height={18} borderRadius={6} />
+                <Skeleton width={120} height={18} borderRadius={8} style={{ flex: 1 }} />
+                <Skeleton width={60} height={18} borderRadius={6} />
+              </div>
+            ))}
+          </div>
+        ) : leaderboard.length ? (
           <ol className={styles.leaderboardList}>
             {leaderboard.map((entry, index) => (
               <li key={entry.id} className={styles.leaderboardItem}>
@@ -441,8 +452,7 @@ export function LoginForm() {
           </ol>
         ) : (
           <p className={styles.emptyState}>
-            No players yet. Create one locally and the leaderboard will start
-            filling in.
+            No players on the leaderboard yet. Be the first!
           </p>
         )}
       </div>

@@ -270,7 +270,7 @@
 .field input:focus {
   outline: none;
   border-color: rgba(255, 255, 255, 0.38);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3);
 }
 
 .submit {
@@ -386,6 +386,14 @@
 }
 
 .error {
+  color: #fca5a5;
+}
+
+.fieldError {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
   color: #fca5a5;
 }
 

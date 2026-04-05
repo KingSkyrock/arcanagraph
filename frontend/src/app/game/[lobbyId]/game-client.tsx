@@ -86,8 +86,8 @@ function getStatusMessage(lobby: Lobby | null, currentUserId: string | null) {
 
   if (!lobby.match) {
     return lobby.state === "in_game"
-      ? "Match state is loading..."
-      : `Lobby state: ${lobby.state}`;
+      ? "Loading match..."
+      : "Waiting for players...";
   }
 
   if (lobby.match.status === "finished") {
@@ -259,7 +259,7 @@ export function GameClient({ lobbyId }: GameClientProps) {
       setStatus((currentStatus) =>
         currentStatus.includes("won") || currentStatus.includes("eliminated")
           ? currentStatus
-          : "Socket offline. Reconnecting to live match updates...",
+          : "Connection lost. Reconnecting...",
       );
     });
 
@@ -289,11 +289,7 @@ export function GameClient({ lobbyId }: GameClientProps) {
     socket.on("connect_error", (connectError) => {
       console.error(connectError);
       setSocketConnected(false);
-      setError(
-        connectError.message
-          ? `Unable to connect to live lobby updates: ${connectError.message}`
-          : "Unable to connect to live lobby updates.",
-      );
+      setError("Unable to connect to the game server. Please try again.");
     });
 
     socket.connect();
@@ -442,7 +438,7 @@ export function GameClient({ lobbyId }: GameClientProps) {
           <p className={styles.label}>Session required</p>
           <h2>Sign in before joining a match.</h2>
           <p className={styles.muted}>
-            The game room uses the same Firebase and Express session as the lobby flow.
+            Sign in with your Arcanagraph account to join the battle.
           </p>
           <Link className={styles.linkButton} href="/login">
             Go to login
@@ -460,8 +456,7 @@ export function GameClient({ lobbyId }: GameClientProps) {
           <p className={styles.kicker}>Game Room</p>
           <h1>Match {lobby?.inviteCode || "loading"}</h1>
           <p className={styles.copy}>
-            Health bars and attacks are synced through the same lobby record, so every hit updates
-            for both players in real time.
+            Trace the equation with your hand and hold an open palm to cast your spell. Every hit is live!
           </p>
           <div className={styles.links}>
             <Link className={styles.linkButton} href={`/play?lobby=${lobbyId}`}>
@@ -482,16 +477,16 @@ export function GameClient({ lobbyId }: GameClientProps) {
               <p className={styles.label}>Battle status</p>
               <h2>{status}</h2>
             </div>
-            <span className={styles.state}>{socketConnected ? "Socket online" : "Socket offline"}</span>
+            <span className={styles.state}>{socketConnected ? "Live" : "Reconnecting..."}</span>
           </div>
 
           <div className={styles.summaryGrid}>
             <div className={styles.summaryCard}>
-              <span>Lobby state</span>
-              <strong>{lobby?.state || "loading"}</strong>
+              <span>Match status</span>
+              <strong>{lobby?.state === "in_game" ? "In progress" : lobby?.state === "waiting" ? "Waiting" : lobby?.state || "Loading"}</strong>
             </div>
             <div className={styles.summaryCard}>
-              <span>Max graph damage</span>
+              <span>Damage per spell</span>
               <strong>{lobby?.match?.damagePerAttack ?? "--"}</strong>
             </div>
             <div className={styles.summaryCard}>
