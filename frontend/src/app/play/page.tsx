@@ -50,6 +50,7 @@ export default function PlayPage() {
   >([]);
   const [customLoading, setCustomLoading] = useState(false);
   const [customError, setCustomError] = useState('');
+  const [difficulty, setDifficulty] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -191,7 +192,7 @@ export default function PlayPage() {
             Back to Mode Selection
           </button>
           <Suspense fallback={<div style={{ textAlign: 'center', fontWeight: 700, padding: 48 }}>Loading lobby tools...</div>}>
-            <PlayClient />
+            <PlayClient autoCreateWithDifficulty={difficulty} />
           </Suspense>
         </div>
       </main>
@@ -290,7 +291,7 @@ export default function PlayPage() {
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(34, 197, 94)', 'rgb(21, 128, 61)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(21, 128, 61)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
-                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
+                onClick={() => { if (mode === 'battle') { setDifficulty('shapes'); setStep('lobby'); } else goToSolo(); }}
               >Shapes</button>
 
               <button
@@ -299,7 +300,7 @@ export default function PlayPage() {
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(180, 83, 9)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(180, 83, 9)', true, 'rgb(217, 119, 6)')}
-                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
+                onClick={() => { if (mode === 'battle') { setDifficulty('beginner'); setStep('lobby'); } else goToSolo(); }}
               >Beginner Functions</button>
 
               <button
@@ -308,7 +309,7 @@ export default function PlayPage() {
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(239, 104, 104)', 'rgb(185, 28, 28)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(185, 28, 28)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(185, 28, 28)', true, 'rgb(220, 38, 38)')}
-                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
+                onClick={() => { if (mode === 'battle') { setDifficulty('advanced'); setStep('lobby'); } else goToSolo(); }}
               >Advanced Functions</button>
             </div>
 
@@ -320,7 +321,7 @@ export default function PlayPage() {
               onMouseLeave={e => handleMouseLeave(e, 'rgb(162, 28, 175)', 'rgb(112, 26, 117)', true)}
               onMouseDown={e => handleMouseDown(e, 'rgb(112, 26, 117)')}
               onMouseUp={e => handleMouseEnter(e, 'rgb(112, 26, 117)', true, 'rgb(134, 25, 143)')}
-              onClick={() => mode === 'battle' ? setStep('lobby') : void openCustomSolo()}
+              onClick={() => { if (mode === 'battle') { setDifficulty('custom'); setStep('lobby'); } else void openCustomSolo(); }}
               disabled={customLoading}
             >{customLoading ? 'Loading...' : 'Custom'}</button>
 
