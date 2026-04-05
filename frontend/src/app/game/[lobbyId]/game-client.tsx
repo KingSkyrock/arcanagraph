@@ -479,6 +479,23 @@ export function GameClient({ lobbyId }: GameClientProps) {
             <span className={styles.state}>{socketConnected ? "Live" : "Reconnecting..."}</span>
           </div>
 
+          {currentMatchPlayer && lobby?.match ? (
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span className={styles.label}>Your Health</span>
+                <strong style={{ fontSize: 18 }}>
+                  {currentMatchPlayer.health} / {lobby.match.maxHealth}
+                </strong>
+              </div>
+              <div className={styles.healthTrack}>
+                <div
+                  className={styles.healthFill}
+                  style={{ width: `${Math.max(0, Math.min(100, (currentMatchPlayer.health / lobby.match.maxHealth) * 100))}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
+
           <div className={styles.summaryGrid}>
             <div className={styles.summaryCard}>
               <span>Match status</span>
@@ -496,10 +513,16 @@ export function GameClient({ lobbyId }: GameClientProps) {
 
           {lastActionMessage ? <p className={styles.muted}>{lastActionMessage}</p> : null}
           {error ? <p className={styles.error}>{error}</p> : null}
-          {currentPlayer ? (
-            <p className={styles.muted}>
-              Signed in as {formatPlayerName(currentPlayer)}.
-            </p>
+
+          {lobby?.match?.status === "active" ? (
+            <button
+              type="button"
+              className={styles.linkButton}
+              style={{ justifySelf: "center" }}
+              onClick={() => document.querySelector('[class*="cvPanel"]')?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Scroll to camera ↓
+            </button>
           ) : null}
         </div>
 
