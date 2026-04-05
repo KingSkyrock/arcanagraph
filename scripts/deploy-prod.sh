@@ -25,12 +25,15 @@ ssh "$SERVER" "
   npm --prefix frontend install --no-fund --no-audit 2>&1 | tail -1
   npm --prefix backend install --no-fund --no-audit 2>&1 | tail -1
 
+  echo '==> Stopping services for clean build...'
+  pm2 stop all > /dev/null 2>&1 || true
+
   echo '==> Building frontend...'
+  rm -rf frontend/.next
   npm --prefix frontend run build 2>&1 | tail -3
 
-  echo '==> Restarting services...'
-  pm2 kill > /dev/null 2>&1 || true
-  pm2 start $APP_ROOT/ops/pm2/ecosystem.config.cjs
+  echo '==> Starting services...'
+  pm2 restart all --update-env > /dev/null 2>&1 || pm2 start $APP_ROOT/ops/pm2/ecosystem.config.cjs
   pm2 save
 
   sleep 3

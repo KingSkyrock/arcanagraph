@@ -1602,8 +1602,8 @@ export function GraphBattlePanel({
         if (hovering) {
           if (nonDomHover && nonDomHover.powerupId === hovering.id) {
             // same powerup — check if held long enough
-            if (now - nonDomHover.startTime >= COLLECT_HOVER_MS && currentSocket) {
-              currentSocket.emit("powerup:collect", { lobbyId: currentLobbyId, powerupId: hovering.id });
+            if (now - nonDomHover.startTime >= COLLECT_HOVER_MS && socket?.connected) {
+              socket.emit("powerup:collect", { lobbyId, powerupId: hovering.id });
               nonDomHover = null;
             }
           } else {
