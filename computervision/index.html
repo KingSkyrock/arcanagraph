@@ -705,6 +705,7 @@
       trails.Left = [];
       trails.Right = [];
       shapeDebugData = null;
+      gradeAnim = null;
       drawCtx.clearRect(0, 0, 640, 480);
       document.getElementById("scoreDisplay").textContent = "";
     });
@@ -713,6 +714,7 @@
       trails.Left = [];
       trails.Right = [];
       shapeDebugData = null;
+      gradeAnim = null;
       drawCtx.clearRect(0, 0, 640, 480);
       document.getElementById("scoreDisplay").textContent = "";
       setEquation(selectRandomEquation());
@@ -733,6 +735,10 @@
     let openPalmDetected = false;
     let openPalmStart = 0;
     let palmScored = false;
+    let gestureFrameCount = 0;
+
+    // grade animation state
+    let gradeAnim = null; // { score, startTime, duration }
 
     // drawing state per hand (keyed by "Left"/"Right" from mediapipe)
     const trails = { Left: [], Right: [] };
@@ -866,8 +872,9 @@
 
       const results = handLandmarker.detectForVideo(video, now);
 
-      // check for open palm gesture every 5 frames to save perf
-      if (gestureRecognizer && Math.round(now) % 5 === 0) {
+      // check for open palm gesture every 3 frames
+      gestureFrameCount++;
+      if (gestureRecognizer && gestureFrameCount % 3 === 0) {
         try {
           const gestureResults = gestureRecognizer.recognizeForVideo(video, now + 0.1);
           let palmNow = false;
@@ -881,6 +888,7 @@
           }
           if (palmNow && !openPalmDetected) {
             openPalmStart = now;
+            gradeAnim = null; // clear any previous animation
           }
           openPalmDetected = palmNow;
         } catch (e) { /* ignore timing errors */ }
@@ -896,6 +904,7 @@
         if (s.drawnScaled) {
           shapeDebugData = { drawnScaled: s.drawnScaled, truthCentered: s.truthCentered };
         }
+        gradeAnim = { score: s.total, startTime: now, duration: 2000 };
       }
       // reset when palm goes away
       if (!openPalmDetected) {
@@ -1103,6 +1112,42 @@
 
       // magic particles
       updateAndDrawParticles();
+
+      // grade animation (only show after scoring, not during "Grading..." countdown)
+      if (gradeAnim && palmScored) {
+        const elapsed = now - gradeAnim.startTime;
+        if (elapsed > gradeAnim.duration) {
+          gradeAnim = null;
+        } else {
+          const t = elapsed / gradeAnim.duration;
+          // count up effect for first 40%, then hold, then fade out
+          const countUpT = Math.min(1, t / 0.4);
+          const displayNum = Math.round(countUpT * gradeAnim.score);
+          const fadeOut = t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
+          // scale: pop in then settle
+          const scale = t < 0.1 ? 0.5 + (t / 0.1) * 0.7 : 1.2 - (Math.min(t, 0.3) - 0.1) * 1;
+
+          // color based on current displayed value
+          let color;
+          if (displayNum >= 80) color = "#33ff33";
+          else if (displayNum >= 50) color = "#ffd700";
+          else color = "#ff3333";
+
+          ctx.save();
+          ctx.scale(-1, 1);
+          ctx.globalAlpha = fadeOut;
+          ctx.font = `bold ${Math.round(72 * Math.max(1, scale))}px system-ui`;
+          ctx.fillStyle = color;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 20;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`${displayNum}%`, -320, 200);
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+      }
 
       // render all trails on the drawing canvas
       renderTrails();
