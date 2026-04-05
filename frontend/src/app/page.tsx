@@ -45,7 +45,7 @@ function BgPattern() {
       {items.map((s, i) => (
         <span key={i} style={{
           position: 'absolute', left: s.x, top: s.y,
-          color: 'rgba(255,255,255,0.13)',
+          color: 'rgba(255, 255, 255, 0.66)',
           fontSize: s.sz, fontFamily: 'serif', fontWeight: 700,
           transform: `rotate(${s.r}deg)`, userSelect: 'none',
         }}>{s.s}</span>
