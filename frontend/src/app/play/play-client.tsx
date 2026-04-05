@@ -400,7 +400,7 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayCli
   const headingStyle: React.CSSProperties = {
     fontSize: 'clamp(28px,4vw,44px)', lineHeight: 0.95,
     letterSpacing: '-0.05em', color: '#fff',
-    fontFamily: "'Impact','Arial Black','Oswald',system-ui,sans-serif",
+    fontWeight: 900,
   };
   const legoBtn: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

@@ -240,7 +240,7 @@ export default function PlayPage() {
         {step === 'mode' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32, alignItems: 'center', width: '100%' }}>
             <h2 style={{
-              fontFamily: "'Impact', 'Arial Black', sans-serif",
+              fontWeight: 900,
               fontSize: 56, color: 'rgb(255, 255, 255)', marginBottom: 20
             }}>Pick Your Quest</h2>
 
@@ -277,7 +277,7 @@ export default function PlayPage() {
         {step === 'type' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
             <h2 style={{
-              fontFamily: "'Impact', 'Arial Black', sans-serif",
+              fontWeight: 900,
               fontSize: 48, color: 'rgb(222, 218, 252)', marginBottom: 40
             }}>Choose Difficulty</h2>
 
@@ -349,7 +349,7 @@ export default function PlayPage() {
         {step === 'custom' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
             <h2 style={{
-              fontFamily: "'Impact', 'Arial Black', sans-serif",
+              fontWeight: 900,
               fontSize: 48, color: 'rgb(222, 218, 252)', marginBottom: 18,
             }}>Choose Skill Family</h2>
 

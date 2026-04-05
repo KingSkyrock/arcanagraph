@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updateProfile,
 } from "firebase/auth";
@@ -177,6 +179,55 @@ export function LoginForm() {
           ? loadError.message
           : "Could not load backend Firebase status.",
       );
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    if (!firebaseConfigReady()) {
+      setError("Login is not configured yet. Please contact the team.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const auth = getFirebaseAuth();
+      const provider = new GoogleAuthProvider();
+      const credential = await signInWithPopup(auth, provider);
+      const idToken = await credential.user.getIdToken(true);
+      const response = await fetch(apiUrl("/api/auth/session"), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idToken,
+          displayName: credential.user.displayName || null,
+        }),
+      });
+      const payload = await readJson<SessionResponse>(response);
+
+      if (!response.ok || !payload.user) {
+        throw new Error(payload.error || "Could not create backend session.");
+      }
+
+      setUser(payload.user);
+      emitSessionUserUpdated(payload.user);
+      setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
+      await loadLeaderboard();
+      router.push("/");
+    } catch (submitError) {
+      const message = getAuthErrorMessage(submitError, "sign-in");
+
+      if (
+        !(typeof submitError === "object" && submitError !== null && "code" in submitError)
+      ) {
+        console.error(submitError);
+      }
+
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -388,74 +439,29 @@ export function LoginForm() {
               ? "Sign In"
               : "Create Account"}
         </button>
-      </form>
 
-      <div className={styles.statusCard}>
-        <p className={styles.statusLabel}>Account</p>
-        <strong>{status}</strong>
-        {user ? (
-          <div className={styles.record}>
-            <div className={styles.recordBlock}>
-              <span>{formatPlayerName(user)}</span>
-              <small>{formatPlayerRank(user)}</small>
-            </div>
-            <div className={styles.recordBlock}>
-              <span>
-                {user.wins}W / {user.losses}L / {user.gamesPlayed} GP
-              </span>
-            </div>
-          </div>
-        ) : null}
-        {error ? <p className={styles.error}>{error}</p> : null}
-        {user ? (
-          <button
-            type="button"
-            className={styles.secondaryButton}
-            onClick={handleLogout}
-            disabled={loading}
-          >
-            Sign out
-          </button>
-        ) : null}
-      </div>
-
-      <div className={styles.leaderboard}>
-        <div className={styles.leaderboardHeader}>
-          <p className={styles.panelLabel}>Leaderboard</p>
-          <span>Rank / XP / Record</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>or</span>
+          <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.18)" }} />
         </div>
 
-        {leaderboardLoading ? (
-          <div style={{ display: 'grid', gap: 12, padding: '12px 0' }}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '0 4px' }}>
-                <Skeleton width={28} height={18} borderRadius={6} />
-                <Skeleton width={120} height={18} borderRadius={8} style={{ flex: 1 }} />
-                <Skeleton width={60} height={18} borderRadius={6} />
-              </div>
-            ))}
-          </div>
-        ) : leaderboard.length ? (
-          <ol className={styles.leaderboardList}>
-            {leaderboard.map((entry, index) => (
-              <li key={entry.id} className={styles.leaderboardItem}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <div className={styles.leaderboardMeta}>
-                  <strong>{formatPlayerName(entry)}</strong>
-                  <small>{formatPlayerRank(entry)}</small>
-                </div>
-                <span>
-                  {entry.wins} / {entry.losses} / {entry.gamesPlayed}
-                </span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className={styles.emptyState}>
-            No players on the leaderboard yet. Be the first!
-          </p>
-        )}
-      </div>
+        <button
+          type="button"
+          className={styles.submit}
+          style={{ background: "#fff", color: "#333", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}
+          disabled={loading}
+          onClick={handleGoogleSignIn}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.1 24.1 0 0 0 0 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Sign in with Google
+          </span>
+        </button>
+      </form>
+
+      {error ? <p className={styles.error} style={{ textAlign: 'center' }}>{error}</p> : null}
+
     </div>
   );
 }

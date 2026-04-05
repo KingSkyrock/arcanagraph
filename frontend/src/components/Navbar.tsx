@@ -124,9 +124,8 @@ export default function Navbar() {
             style={{ objectFit: 'contain' }}
           />
           <span style={{
-            color: 'rgb(220, 229, 238)', fontSize: 18, fontWeight: 600,
-            letterSpacing: '-0.5px', marginLeft: -2,
-            fontFamily: "'Segoe UI', 'Inter', 'Oswald', sans-serif",
+            color: 'rgb(220, 229, 238)', fontSize: 18, fontWeight: 700,
+            letterSpacing: '-0.3px', marginLeft: 6,
           }}>
             Arcanagraph
           </span>
@@ -152,13 +151,13 @@ export default function Navbar() {
               <>
                 {/* Profile pill */}
                 <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 12,
-                  padding: '6px 10px 6px 6px', borderRadius: 999,
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '4px 10px 4px 4px', borderRadius: 999,
                   background: 'rgba(255,255,255,0.08)',
                   border: '1px solid rgba(255,255,255,0.12)',
                 }}>
                   <div style={{
-                    position: 'relative', width: 42, height: 42,
+                    position: 'relative', width: 36, height: 36,
                     overflow: 'hidden', borderRadius: '50%',
                     background: 'rgba(255,255,255,0.12)',
                     border: '1px solid rgba(255,255,255,0.18)', flexShrink: 0,
@@ -167,7 +166,7 @@ export default function Navbar() {
                       <Image
                         src={selectedProfilePicture.imagePath}
                         alt={`${playerLabel} avatar`}
-                        fill sizes="42px" unoptimized
+                        fill sizes="36px" unoptimized
                         style={{ objectFit: 'cover', imageRendering: 'pixelated' }}
                       />
                     ) : null}

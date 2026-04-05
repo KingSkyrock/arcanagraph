@@ -1,8 +1,13 @@
 .profileLayout {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 20px;
   align-items: start;
+}
+
+.profileLayout .previewPanel {
+  grid-template-columns: minmax(0, 160px) minmax(0, 1fr);
+  align-items: center;
 }
 
 .previewPanel {
@@ -25,9 +30,12 @@
 }
 
 .previewImage {
-  object-fit: cover;
+  object-fit: contain;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  inset: 14px !important;
+  width: calc(100% - 28px) !important;
+  height: calc(100% - 28px) !important;
 }
 
 .previewPlaceholder {
@@ -61,14 +69,14 @@
 
 .profilePictureGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .profilePictureCard {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 6px;
+  padding: 8px;
   text-align: left;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 24px;
@@ -109,7 +117,7 @@
   position: relative;
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 14px;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.18), transparent 54%),
     rgba(9, 25, 76, 0.42);
@@ -117,7 +125,7 @@
 
 .profilePictureImageInset {
   position: absolute;
-  inset: 14px;
+  inset: 10px;
 }
 
 .profilePictureImage {
@@ -132,7 +140,7 @@
 }
 
 .profilePictureMeta strong {
-  font-size: 20px;
+  font-size: 15px;
   line-height: 1;
 }
 
@@ -151,26 +159,17 @@
 }
 
 @media (max-width: 900px) {
-  .profileLayout {
-    grid-template-columns: 1fr;
-  }
-
-  .previewPanel {
-    grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
-    align-items: center;
+  .profilePictureGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
-  .profilePictureGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .previewPanel {
+  .profileLayout .previewPanel {
     grid-template-columns: 1fr;
   }
 
   .previewFrame {
-    max-width: 260px;
+    max-width: 200px;
   }
 }

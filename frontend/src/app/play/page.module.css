@@ -114,14 +114,14 @@
 
 .hero h1,
 .panel h2 {
-  line-height: 0.95;
-  letter-spacing: -0.05em;
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .hero h1 {
   max-width: 9ch;
   font-size: clamp(54px, 7vw, 88px);
-  font-family: "Impact", "Arial Black", "Oswald", system-ui, sans-serif;
+  font-weight: 900;
   color: #fff;
 }
 

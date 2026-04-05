@@ -1,27 +1,27 @@
 .page {
   min-height: 100vh;
-  padding: 32px;
+  padding: 20px;
   background: linear-gradient(180deg, #1877f2 0%, #2d87ff 55%, #4f9bff 100%);
   color: #fff;
 }
 
 .shell {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(380px, 460px);
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 440px);
   align-items: stretch;
-  gap: 24px;
+  gap: 20px;
   width: min(100%, 1320px);
-  min-height: calc(100vh - 64px);
+  height: calc(100vh - 116px);
   margin: 0 auto;
 }
 
 .hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   align-items: center;
   overflow: hidden;
-  padding: 48px;
+  padding: 36px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 36px;
   background: rgba(11, 31, 92, 0.24);
@@ -38,6 +38,7 @@
   flex-direction: column;
   gap: 20px;
   justify-content: flex-start;
+  padding-left: 16px;
 }
 
 .brand {
@@ -48,10 +49,10 @@
 
 .hero h1 {
   max-width: 8ch;
-  font-size: clamp(72px, 8vw, 120px);
-  font-family: "Impact", "Arial Black", "Oswald", system-ui, sans-serif;
-  line-height: 0.88;
-  letter-spacing: -0.08em;
+  font-size: clamp(48px, 6vw, 80px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
   color: #fff;
 }
 
@@ -89,86 +90,57 @@
 
 .blockField {
   position: relative;
-  min-height: 440px;
+  min-height: 340px;
   overflow: hidden;
 }
 
 .blockField span {
   position: absolute;
   display: block;
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #7fb4ff 0%, #4f62ff 100%);
-  box-shadow: 0 10px 20px rgba(10, 20, 68, 0.18);
+  width: 50px;
+  height: 50px;
+  border-radius: 15px;
+  background: rgba(245, 158, 11, 0.4);
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
-.blockOne {
-  left: 0;
-  top: 204px;
-}
+/*
+  Arrow pointing right (50px blocks, 60px spacing):
+  O O O # O O
+  O O O O # O
+  # # # # # #
+  O O O O # O
+  O O O # O O
+*/
 
-.blockTwo {
-  left: 66px;
-  top: 204px;
-}
+/* Row 0: col 3 */
+.blockOne { left: 180px; top: 18px; }
 
-.blockThree {
-  left: 132px;
-  top: 204px;
-}
+/* Row 1: col 4 */
+.blockTwo { left: 240px; top: 78px; }
 
-.blockFour {
-  left: 198px;
-  top: 204px;
-}
+/* Row 2 (shaft): cols 0-5 */
+.blockThree { left: 0; top: 138px; }
+.blockFour { left: 60px; top: 138px; }
+.blockFive { left: 120px; top: 138px; }
+.blockSix { left: 180px; top: 138px; }
+.blockSeven { left: 240px; top: 138px; }
+.blockEight { left: 300px; top: 138px; }
 
-.blockFive {
-  left: 264px;
-  top: 204px;
-}
+/* Row 3: col 4 */
+.blockNine { left: 240px; top: 198px; }
 
-.blockSix {
-  left: 330px;
-  top: 204px;
-}
+/* Row 4: col 3 */
+.blockTen { left: 180px; top: 258px; }
 
-.blockSeven {
-  left: 330px;
-  top: 138px;
-}
-
-.blockEight {
-  left: 330px;
-  top: 72px;
-}
-
-.blockNine {
-  left: 330px;
-  top: 270px;
-}
-
-.blockTen {
-  left: 264px;
-  top: 6px;
-}
-
-.blockEleven {
-  left: 264px;
-  top: 336px;
-}
-
-.blockTwelve {
-  left: 132px;
-  top: 336px;
-}
+.blockEleven { display: none; }
 
 .panel {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 20px;
-  padding: 28px;
+  gap: 14px;
+  padding: 24px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 36px;
   background: rgba(11, 31, 92, 0.24);
@@ -182,14 +154,14 @@
 
 .panelHeader {
   display: grid;
-  gap: 20px;
+  gap: 12px;
 }
 
 .panelHeader h2 {
-  font-size: 40px;
-  font-family: "Impact", "Arial Black", "Oswald", system-ui, sans-serif;
-  line-height: 0.95;
-  letter-spacing: -0.06em;
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
   color: #fff;
 }
 
@@ -205,6 +177,7 @@
 .modeSwitch {
   display: inline-grid;
   grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
   padding: 4px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 20px;
@@ -239,22 +212,22 @@
 .form,
 .leaderboard {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .field span {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.84);
 }
 
 .field input {
-  min-height: 56px;
+  min-height: 46px;
   padding: 0 16px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 18px;
@@ -274,7 +247,7 @@
 }
 
 .submit {
-  min-height: 56px;
+  min-height: 46px;
   border: 0;
   border-radius: 18px;
   background: #f59e0b;

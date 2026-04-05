@@ -185,7 +185,7 @@ export default function SettingsPage() {
   return (
     <main className={sharedStyles.page} style={{ paddingTop: 112 }}>
       <Navbar />
-      <section className={sharedStyles.shell}>
+      <section className={sharedStyles.shell} style={{ maxWidth: 1100 }}>
         <div className={sharedStyles.hero}>
           <p className={sharedStyles.kicker}>Settings</p>
           <h1>Player Setup</h1>
@@ -204,7 +204,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <section className={sharedStyles.panel}>
+        <section className={sharedStyles.panel} style={{ padding: '30px 28px' }}>
           <div className={sharedStyles.panelHeader}>
             <div>
               <p className={sharedStyles.label}>Primary hand</p>
@@ -258,7 +258,7 @@ export default function SettingsPage() {
           </p>
         </section>
 
-        <section className={sharedStyles.panel}>
+        <section className={sharedStyles.panel} style={{ padding: '30px 28px' }}>
           <div className={sharedStyles.panelHeader}>
             <div>
               <p className={sharedStyles.label}>Profile picture</p>
@@ -272,8 +272,7 @@ export default function SettingsPage() {
           </div>
 
           <p className={sharedStyles.muted}>
-            Two familiars are available immediately. The last two unlock at low
-            levels so players pick up progression quickly without waiting long.
+            Choose your spirit animal. Unlock more by leveling up!
           </p>
 
           <div className={settingsStyles.profileLayout}>

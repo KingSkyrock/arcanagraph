@@ -46,7 +46,7 @@
 .fighterIdentity small,
 .selfTag {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.74);
@@ -54,14 +54,14 @@
 
 .hero h1,
 .panel h2 {
-  line-height: 0.92;
-  letter-spacing: -0.06em;
+  line-height: 1;
+  letter-spacing: -0.02em;
   color: #fff;
 }
 
 .hero h1 {
   font-size: clamp(54px, 8vw, 96px);
-  font-family: "Impact", "Arial Black", "Oswald", system-ui, sans-serif;
+  font-weight: 900;
 }
 
 .panel h2 {
@@ -218,8 +218,8 @@
 }
 
 .modalHeader h2 {
-  line-height: 0.92;
-  letter-spacing: -0.06em;
+  line-height: 1;
+  letter-spacing: -0.02em;
   color: #fff;
   font-size: clamp(28px, 4vw, 44px);
 }

@@ -9,12 +9,12 @@ export default function LoginPage() {
   return (
     <>
       <Navbar />
-      <main className={styles.page} style={{ paddingTop: 112 }}>
+      <main className={styles.page} style={{ paddingTop: 96 }}>
         <section className={styles.shell}>
           <div className={styles.hero}>
             <div className={styles.heroCopy}>
               <p className={styles.brand}>✦ Arcanagraph</p>
-              <h1>Login to the arena.</h1>
+              <h1>Sign in<br />to the<br />arena.</h1>
               <p className={styles.copy}>
                 Sign in or create a player account to track your wins, losses,
                 XP, level, and class rank across multiplayer matches.
@@ -40,8 +40,6 @@ export default function LoginPage() {
               <span className={styles.blockEight} />
               <span className={styles.blockNine} />
               <span className={styles.blockTen} />
-              <span className={styles.blockEleven} />
-              <span className={styles.blockTwelve} />
             </div>
           </div>
 

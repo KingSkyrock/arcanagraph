@@ -22,8 +22,8 @@
 .hero h1 {
   max-width: 12ch;
   font-size: clamp(56px, 7vw, 88px);
-  line-height: 0.94;
-  letter-spacing: -0.06em;
+  line-height: 1;
+  letter-spacing: -0.02em;
 }
 
 .copy {
@@ -98,7 +98,7 @@
 .card h2 {
   font-size: 32px;
   line-height: 1;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.02em;
 }
 
 .card span {

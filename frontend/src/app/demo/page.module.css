@@ -29,9 +29,9 @@
 .hero h1 {
   max-width: 11ch;
   font-size: clamp(52px, 7vw, 84px);
-  font-family: "Impact", "Arial Black", "Oswald", system-ui, sans-serif;
+  font-weight: 900;
   line-height: 0.92;
-  letter-spacing: -0.06em;
+  letter-spacing: -0.02em;
   color: #fff;
 }
 
@@ -99,7 +99,7 @@
 .arenaHeader h2 {
   font-size: clamp(28px, 4vw, 44px);
   line-height: 0.98;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.02em;
   color: #fff;
 }
 
@@ -164,7 +164,7 @@
 .panelHeader h2 {
   font-size: clamp(26px, 3vw, 36px);
   line-height: 0.95;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.02em;
 }
 
 .teamChip {
@@ -314,7 +314,7 @@
 .customizerHeader h2 {
   font-size: clamp(28px, 4vw, 44px);
   line-height: 0.98;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.02em;
   color: #fff;
 }
 
@@ -447,7 +447,7 @@
 .carouselHeader h3 {
   font-size: 24px;
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   color: #fff;
 }
 

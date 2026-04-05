@@ -79,7 +79,10 @@ function HeroSection() {
           display: flex;
           flex-direction: column;
           align-items: flex-start;
-          gap: 20px;
+          gap: 16px;
+        }
+        .hero-buttons {
+          align-items: flex-start;
         }
         .hero-elephant {
           position: absolute;
@@ -131,6 +134,9 @@ function HeroSection() {
             align-items: center;
             text-align: center;
           }
+          .hero-buttons {
+            align-items: center;
+          }
           .hero-elephant {
             position: relative;
             right: auto;
@@ -155,25 +161,23 @@ function HeroSection() {
 
       <div className="hero-text">
         <h1 style={{
-          fontSize: 'clamp(42px, 5.8vw, 84px)',
+          fontSize: 'clamp(36px, 4.5vw, 64px)',
           fontWeight: 900,
           color: '#fff',
-          margin: '0 0 12px',
-          lineHeight: 1.05,
-          letterSpacing: '-1px',
-          fontFamily: "'Impact', 'Arial Black', 'Oswald', system-ui, sans-serif",
+          lineHeight: 1.1,
+          letterSpacing: '-0.5px',
         }}>
-          Cast Spells<br />with Math
+          Cast Spells with Math
         </h1>
 
         <p style={{
-          fontSize: 'clamp(15px, 2vw, 18px)', color: 'rgba(255,255,255,0.88)',
-          margin: '0 0 24px', fontWeight: 500, lineHeight: 1.55, maxWidth: 700,
+          fontSize: 'clamp(15px, 1.8vw, 18px)', color: 'rgba(255,255,255,0.88)',
+          fontWeight: 500, lineHeight: 1.55, maxWidth: 500,
         }}>
           Draw math functions in the air with your hands to cast spells and battle your friends.
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, width: '100%' }}>
+        <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
           <Link
             href="/play"
             style={{
@@ -221,6 +225,7 @@ function HeroSection() {
               border: '1px solid rgba(255,255,255,0.24)',
               borderRadius: 50,
               padding: '12px 36px',
+              marginLeft: 8,
               fontWeight: 700,
               fontSize: 15,
               cursor: 'pointer',
@@ -301,8 +306,8 @@ function LeaderboardSection() {
       <div style={{ width: '100%', maxWidth: 820 }}>
         <div style={{ textAlign: 'center', marginBottom: 44 }}>
           <h2 style={{
-            fontSize: 60, fontWeight: 900, color: 'rgb(9, 15, 131)', margin: '0 0 10px',
-            fontFamily: " 'Arial Black', 'Oswald', system-ui, sans-serif", letterSpacing: '-1px',
+            fontSize: 48, fontWeight: 900, color: 'rgb(9, 15, 131)', margin: '0 0 10px',
+            letterSpacing: '-1px',
           }}>Leaderboard</h2>
           <p style={{ color: '#64748b', fontSize: 18, fontFamily: "'Nunito', system-ui, sans-serif" }}>
             Top wizards this week
