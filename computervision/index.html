@@ -93,7 +93,6 @@
 </head>
 <body>
   <h1>ArcanaGraph - Hand Tracking</h1>
-  <div id="equationDisplay"></div>
   <div id="battleLayout">
     <div id="container">
       <video id="webcam" autoplay playsinline></video>
@@ -101,8 +100,11 @@
       <canvas id="drawing" width="640" height="480"></canvas>
       <canvas id="overlay" width="640" height="480"></canvas>
     </div>
-    <div id="opponentContainer">
-      <div id="opponentLabel">Opponent<br>Waiting...</div>
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div id="opponentContainer">
+        <div id="opponentLabel">Opponent<br>Waiting...</div>
+      </div>
+      <div id="equationDisplay"></div>
     </div>
   </div>
   <canvas id="attackCanvas"></canvas>
@@ -350,14 +352,13 @@
       return params;
     }
 
-    function sampleParam(ranges) {
-      // pick a random range, then a random value within it
+    function sampleParam(ranges, depth = 0) {
       const range = ranges[Math.floor(Math.random() * ranges.length)];
       const steps = Math.round((range.max - range.min) / range.step);
       const idx = Math.floor(Math.random() * (steps + 1));
       const val = range.min + idx * range.step;
-      // avoid zero for most params (boring)
-      if (val === 0 && Math.random() > 0.2) return sampleParam(ranges);
+      // avoid zero for most params (boring) — but don't recurse forever
+      if (val === 0 && Math.random() > 0.2 && depth < 10) return sampleParam(ranges, depth + 1);
       return Math.round(val * 1000) / 1000;
     }
 
@@ -775,22 +776,17 @@
       }
 
       // --- Intercept Penalty (extra/missing crossings) ---
+      // use filtered drawn points (noise strokes already removed)
       const xAxisPx = centerY;
       const yAxisPx = W - centerX;
       let drawnXCrossings = 0;
       let drawnYCrossings = 0;
 
-      for (const label of ["Left", "Right"]) {
-        const trail = trails[label];
-        let prev = null;
-        for (const pt of trail) {
-          if (pt === null) { prev = null; continue; }
-          if (prev) {
-            if ((prev.y - xAxisPx) * (pt.y - xAxisPx) < 0) drawnXCrossings++;
-            if ((prev.x - yAxisPx) * (pt.x - yAxisPx) < 0) drawnYCrossings++;
-          }
-          prev = pt;
-        }
+      for (let i = 1; i < drawn.length; i++) {
+        const prev = drawn[i - 1];
+        const pt = drawn[i];
+        if ((prev.y - xAxisPx) * (pt.y - xAxisPx) < 0) drawnXCrossings++;
+        if ((prev.x - yAxisPx) * (pt.x - yAxisPx) < 0) drawnYCrossings++;
       }
 
       const drawnCrossings = drawnXCrossings + drawnYCrossings;
@@ -1086,10 +1082,10 @@
           setTimeout(() => launchAttack(s.total), 900);
         }
       }
-      // reset when palm goes away
+      // reset when palm goes away — but don't allow re-scoring while animation plays
       if (!openPalmDetected) {
         openPalmStart = 0;
-        palmScored = false;
+        if (!gradeAnim) palmScored = false;
       }
 
       // clear hand overlay (not the drawing canvas)
@@ -1228,8 +1224,10 @@
             trails[label].length = trimTo;
             smoothStroke(trails[label]);
             trails[label].push(null);
+            lastTrailPt[label] = null;
             trailHistory[label] = [];
             stableDrawing[label] = false;
+            wasDrawing[label] = false; // prevent double-smooth from the path below
           }
 
           const stable = stableDrawing[label];
