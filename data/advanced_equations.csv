@@ -1,0 +1,19 @@
+category,skill_family,difficulty,template_id,display_template,js_template,type,params,param_ranges,hasTurningPoints
+equation,linear,easy,linear_basic,y = {a}x + {b},({a}) * x + ({b}),explicit,"a,b","a:-3:3:1|b:-5:5:1",false
+equation,linear,medium,linear_steep,y = {a}x + {b},({a}) * x + ({b}),explicit,"a,b","a:-6:-3:1|a:3:6:1|b:-8:8:1",false
+equation,quadratic,easy,quad_vertex_origin,y = {a}x² + {c},({a}) * x * x + ({c}),explicit,"a,c","a:-2:2:0.5|c:-3:3:1",true
+equation,quadratic,medium,quad_standard,y = x² + {b}x + {c},x * x + ({b}) * x + ({c}),explicit,"b,c","b:-4:4:1|c:-5:5:1",true
+equation,quadratic,hard,quad_general,y = {a}x² + {b}x + {c},({a}) * x * x + ({b}) * x + ({c}),explicit,"a,b,c","a:-2:2:0.5|b:-3:3:1|c:-4:4:1",true
+equation,absolute_value,easy,abs_basic,y = |x| + {c},Math.abs(x) + ({c}),explicit,"c","c:-3:3:1",true
+equation,absolute_value,medium,abs_shifted,y = {a}|x - {h}| + {k},({a}) * Math.abs(x - ({h})) + ({k}),explicit,"a,h,k","a:-2:2:0.5|h:-3:3:1|k:-3:3:1",true
+equation,cubic,medium,cubic_basic,y = {a}x³,({a}) * x * x * x,explicit,"a","a:-1:1:0.5",true
+equation,cubic,hard,cubic_depressed,y = x³ + {b}x,x * x * x + ({b}) * x,explicit,"b","b:-4:4:1",true
+equation,square_root,medium,sqrt_basic,y = {a}√(x + {h}),({a}) * Math.sqrt(x + ({h})),explicit,"a,h","a:1:3:0.5|a:-3:-1:0.5|h:-2:3:1",true
+equation,exponential,medium,exp_basic,y = {a}·{b}^x,({a}) * ({b}) ** x,explicit,"a,b","a:1:3:1|b:1.5:3:0.5",false
+equation,exponential,hard,exp_shifted,y = {a}·{b}^x + {c},({a}) * ({b}) ** x + ({c}),explicit,"a,b,c","a:1:2:1|b:1.5:3:0.5|c:-3:3:1",false
+equation,sine,medium,sine_basic,y = {a}sin(x),({a}) * Math.sin(x),explicit,"a","a:1:3:0.5|a:-3:-1:0.5",true
+equation,sine,hard,sine_transformed,y = {a}sin({b}x) + {c},({a}) * Math.sin(({b}) * x) + ({c}),explicit,"a,b,c","a:1:3:0.5|b:1:3:0.5|c:-2:2:1",true
+equation,cosine,medium,cosine_basic,y = {a}cos(x),({a}) * Math.cos(x),explicit,"a","a:1:3:0.5|a:-3:-1:0.5",true
+equation,reciprocal,hard,recip_basic,y = {a}/x,({a}) / x,explicit,"a","a:1:4:1|a:-4:-1:1",false
+equation,circle,medium,circle_basic,x² + y² = {r}²,NA,parametric_circle,"r","r:1:3:0.5",true
+equation,semicircle,easy,semicircle_upper,y = √({r}² - x²),Math.sqrt(({r})*({r}) - x*x),explicit,"r","r:1:3:0.5",true

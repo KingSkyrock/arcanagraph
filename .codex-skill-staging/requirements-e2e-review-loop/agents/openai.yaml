@@ -1,0 +1,4 @@
+interface:
+  display_name: "Requirements E2E Review Loop"
+  short_description: "Run a full build-validate-review delivery loop"
+  default_prompt: "Use $requirements-e2e-review-loop to implement this change with end-to-end analysis, validation, and reviewer closure."

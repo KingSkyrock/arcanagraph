@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
-import Navbar from '@/components/Navbar'; // Use the shared component
+import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -16,9 +15,9 @@ const LEADERBOARD = [
 ];
 
 const DIV_STYLE:Record<string, { bg: string; text: string; border: string }> = {
-  Advanced:     { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
-  Intermediate: { bg: '#fef9c3', text: '#a16207', border: '#fde047' },
-  Beginner:     { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
+  Advanced:     { bg: 'rgba(59,130,246,0.3)', text: '#93c5fd', border: 'rgba(147,197,253,0.4)' },
+  Intermediate: { bg: 'rgba(245,158,11,0.25)', text: '#fbbf24', border: 'rgba(251,191,36,0.4)' },
+  Beginner:     { bg: 'rgba(34,197,94,0.25)', text: '#86efac', border: 'rgba(134,239,172,0.4)' },
 };
 const RANK_ICON:Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
@@ -104,7 +103,7 @@ function HeroSection() {
           fontFamily: "'Nunito', system-ui, sans-serif",
         }}>
           Unlocking Potential. Your Partner in<br />
-          Cultivating Your Child's Math Journey
+          Cultivating Your Child&apos;s Math Journey
         </p>
 
         {/* PLAY NOW — amber pill with strong drop shadow like reference */}
@@ -134,7 +133,6 @@ function HeroSection() {
           }}
           onMouseLeave={e => {
             e.currentTarget.style.transform = 'scale(1) translateY(0)';
-            // Reset to the non-glowy shadow
             e.currentTarget.style.boxShadow = '0 4px 0px #b45309, 0 4px 12px rgba(0,0,0,0.2)';
             e.currentTarget.style.background = '#f59e0b';
           }}
@@ -165,16 +163,18 @@ function HeroSection() {
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         zIndex: 5, pointerEvents: 'none',
       }}>
-        <img
+        <Image
           src="/images/logo.png"
           alt="Icon Elephant"
+          width={580}
+          height={580}
+          priority
           style={{
             width: '60%',
+            height: 'auto',
             maxWidth: 580,
             objectFit: 'contain',
             objectPosition: 'bottom',
-            // mix-blend-mode screen makes the black background of the PNG transparent
-            // so the elephant floats naturally on the blue background
             mixBlendMode: 'screen',
             filter: 'brightness(1.05)',
             pointerEvents: 'none',
@@ -196,7 +196,9 @@ function HeroSection() {
         onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.78)'}
       >
         <span>Leaderboard</span>
-        <ChevronDown size={24} style={{ animation: 'bounce 1.8s ease-in-out infinite' }} />
+        <span style={{ fontSize: 24, lineHeight: 1, animation: 'bounce 1.8s ease-in-out infinite' }}>
+          ↓
+        </span>
       </button>
 
       <style>{`

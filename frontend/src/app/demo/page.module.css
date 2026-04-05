@@ -1,0 +1,595 @@
+.page {
+  display: grid;
+  gap: 28px;
+  min-height: 100vh;
+  padding: 112px 44px 56px;
+  background: linear-gradient(180deg, #1877f2 0%, #2d87ff 55%, #4f9bff 100%);
+  color: #fff;
+}
+
+.hero {
+  display: grid;
+  gap: 20px;
+}
+
+.heroCopy {
+  display: grid;
+  gap: 18px;
+  max-width: 780px;
+}
+
+.kicker {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.hero h1 {
+  max-width: 11ch;
+  font-size: clamp(52px, 7vw, 84px);
+  font-family: "Impact", "Arial Black", "Oswald", system-ui, sans-serif;
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+  color: #fff;
+}
+
+.copy {
+  max-width: 46rem;
+  font-size: 18px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.linkButton,
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    background-color 180ms ease-out;
+}
+
+.linkButton:hover,
+.actionButton:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 24px rgba(10, 20, 68, 0.24);
+}
+
+.arena {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 36px;
+  background: rgba(11, 31, 92, 0.24);
+  box-shadow:
+    0 28px 60px rgba(10, 20, 68, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+.arenaHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  gap: 20px;
+  align-items: end;
+}
+
+.arenaHeader h2 {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  color: #fff;
+}
+
+.note {
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  min-height: 480px;
+  overflow: hidden;
+}
+
+.spellPlane {
+  position: absolute;
+  inset: 18px 0 78px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.panel {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  background: rgba(11, 31, 92, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.leftPanel {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.rightPanel {
+  box-shadow: inset 0 0 0 1px rgba(255, 200, 59, 0.08);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.teamLabel {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.panelHeader h2 {
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.teamChip {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.18);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff3c4;
+}
+
+.facecamShell {
+  position: relative;
+  border-radius: 32px;
+  isolation: isolate;
+}
+
+.facecam {
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+  min-height: 320px;
+  border-radius: 32px;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  background: rgba(11, 31, 92, 0.8);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 24px 54px rgba(10, 20, 68, 0.24);
+}
+
+.leftFacecam {
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 245, 160, 0.16), transparent 26%),
+    linear-gradient(135deg, #0b1f5c 0%, #1a3a8f 52%, #0e2468 100%);
+}
+
+.rightFacecam {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 245, 160, 0.14), transparent 26%),
+    linear-gradient(225deg, #0b1f5c 0%, #1a3a8f 50%, #0e2468 100%);
+}
+
+.facecamBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+}
+
+.facecamCore {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+}
+
+.avatarHalo {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 233, 126, 0.22), transparent 66%);
+  filter: blur(8px);
+}
+
+.avatarOrb {
+  position: relative;
+  width: min(38vw, 140px);
+  height: min(38vw, 140px);
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02)),
+    rgba(11, 31, 92, 0.68);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 18px 40px rgba(0, 0, 0, 0.26);
+}
+
+.facecamText {
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.localParticles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  opacity: 0.62;
+  pointer-events: none;
+}
+
+.particleCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.actionButton {
+  min-height: 52px;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.actionButton:active {
+  transform: translateY(1px);
+}
+
+.customizer {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 36px;
+  background: rgba(11, 31, 92, 0.24);
+  box-shadow:
+    0 28px 60px rgba(10, 20, 68, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+.customizerHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  gap: 20px;
+  align-items: end;
+}
+
+.customizerHeader h2 {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  color: #fff;
+}
+
+.customizerGrid {
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.previewPanel {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  background: rgba(11, 31, 92, 0.3);
+}
+
+.previewLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.pixelShell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  padding: 28px;
+  overflow: hidden;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(11, 31, 92, 0.4), rgba(11, 31, 92, 0.7)),
+    rgba(11, 31, 92, 0.86);
+}
+
+.pixelAura {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 235, 116, 0.24), transparent 68%);
+  filter: blur(12px);
+}
+
+.pixelBoard {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: 0;
+  width: min(100%, 320px);
+  aspect-ratio: 1;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 16%),
+    rgba(11, 31, 92, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 22px 40px rgba(10, 20, 68, 0.28);
+}
+
+.pixelCell {
+  aspect-ratio: 1;
+}
+
+.pixelPedestal {
+  position: absolute;
+  bottom: 28px;
+  width: 180px;
+  height: 18px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 220, 95, 0.34), transparent 72%);
+  filter: blur(6px);
+}
+
+.selectionSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.selectionPill {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.customizerControls {
+  display: grid;
+  gap: 16px;
+}
+
+.carouselSection {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  background: rgba(11, 31, 92, 0.3);
+}
+
+.carouselHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.carouselLabel {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.carouselHeader h3 {
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #fff;
+}
+
+.carouselCount {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.carouselBody {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.carouselButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    background-color 180ms ease-out;
+}
+
+.carouselButton:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 24px rgba(10, 20, 68, 0.24);
+}
+
+.carouselViewport {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.optionCard {
+  display: grid;
+  gap: 8px;
+  min-height: 104px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0.56;
+  transform: scale(0.95);
+  transition:
+    transform 180ms ease-out,
+    opacity 180ms ease-out,
+    background-color 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.optionCard p {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.optionCard strong {
+  font-size: 16px;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.activeOption {
+  opacity: 1;
+  transform: scale(1.02);
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.swatchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+
+@media (max-width: 1040px) {
+  .arenaHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .stage {
+    grid-template-columns: 1fr;
+  }
+
+  .spellPlane {
+    inset: 16px 0 82px;
+  }
+
+  .customizerHeader,
+  .customizerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 28px 20px 40px;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .facecam {
+    min-height: 260px;
+  }
+
+  .carouselBody {
+    grid-template-columns: 1fr;
+  }
+
+  .carouselViewport {
+    order: -1;
+  }
+
+  .pixelShell {
+    min-height: 340px;
+    padding: 20px;
+  }
+}

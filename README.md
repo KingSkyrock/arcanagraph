@@ -2,6 +2,13 @@
 
 Hackathon-ready Next.js frontend plus Express auth API.
 
+Player progression now includes:
+
+- `xp`
+- `level`
+- derived class ranks:
+  `Spark`, `Ember`, `Adept`, `Enchanter`, `Spellbinder`, `Sorcerer`, `Warlock`
+
 ## Stack
 
 - `frontend/`: Next.js app router UI
@@ -55,6 +62,20 @@ npm run dev
 - `GET /api/auth/me`
 - `GET /api/leaderboard`
 - `GET /api/health`
+
+## User progression
+
+Users now include `xp` and `level` in Postgres.
+
+The backend derives a class rank from level:
+
+- Level `1`: `Spark`
+- Levels `2-4`: `Ember`
+- Levels `5-9`: `Adept`
+- Levels `10-14`: `Enchanter`
+- Levels `15-19`: `Spellbinder`
+- Levels `20-29`: `Sorcerer`
+- Levels `30+`: `Warlock`
 
 ## GitHub safety
 

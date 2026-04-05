@@ -1,0 +1,18 @@
+category,skill_family,difficulty,item_id,display_text,print_prompt,trace_prompt,overlay_hint
+equation,linear,easy,eq_linear_y_eq_x,y = x,TRACE Y = X,Trace the rising diagonal line,straight line through the origin
+equation,linear,easy,eq_linear_y_eq_neg_x,y = -x,TRACE Y = NEGATIVE X,Trace the falling diagonal line,straight line through the origin
+equation,linear,easy,eq_linear_y_eq_2x,y = 2x,TRACE Y = 2X,Trace a steeper rising line,straight line with positive slope
+equation,linear,easy,eq_linear_y_eq_half_x,y = 0.5x,TRACE Y = 0.5X,Trace a gentler rising line,straight line with shallow positive slope
+equation,linear,medium,eq_linear_y_eq_x_plus_2,y = x + 2,TRACE Y = X + 2,Trace a rising line shifted up,positive slope with y intercept 2
+equation,linear,medium,eq_linear_y_eq_neg_x_plus_4,y = -x + 4,TRACE Y = NEGATIVE X + 4,Trace a falling line shifted up,negative slope with y intercept 4
+equation,linear,medium,eq_linear_y_eq_3x_minus_1,y = 3x - 1,TRACE Y = 3X - 1,Trace a steep rising line,positive slope with y intercept -1
+equation,linear,hard,eq_linear_y_eq_neg_2x_minus_3,y = -2x - 3,TRACE Y = NEGATIVE 2X - 3,Trace a steep falling line,negative slope with y intercept -3
+equation,absolute_value,easy,eq_abs_y_eq_abs_x,y = |x|,TRACE Y = ABS X,Trace a V shape centered at the origin,two straight rays meeting at the bottom
+equation,absolute_value,medium,eq_abs_y_eq_abs_x_minus_2,y = |x - 2|,TRACE Y = ABS X MINUS 2,Trace a V shape shifted right,vertex at x = 2
+equation,absolute_value,medium,eq_abs_y_eq_abs_x_plus_1,y = |x| + 1,TRACE Y = ABS X PLUS 1,Trace a V shape shifted up,vertex one unit above the origin
+equation,absolute_value,hard,eq_abs_y_eq_2abs_x_minus_3,y = 2|x| - 3,TRACE Y = 2 ABS X MINUS 3,Trace a narrower V shape shifted down,steeper absolute value graph
+equation,quadratic,easy,eq_quad_y_eq_x_sq,y = x^2,TRACE Y = X SQUARED,Trace a U shape opening up,parabola centered at the origin
+equation,quadratic,easy,eq_quad_y_eq_neg_x_sq,y = -x^2,TRACE Y = NEGATIVE X SQUARED,Trace an upside down U shape,parabola opening down
+equation,quadratic,medium,eq_quad_y_eq_x_sq_plus_2,y = x^2 + 2,TRACE Y = X SQUARED PLUS 2,Trace a U shape shifted up,parabola opening up
+equation,quadratic,medium,eq_quad_y_eq_x_minus_1_sq,y = (x - 1)^2,TRACE Y = X MINUS 1 SQUARED,Trace a U shape shifted right,vertex at x = 1
+equation,quadratic,hard,eq_quad_y_eq_2x_sq_minus_4,y = 2x^2 - 4,TRACE Y = 2X SQUARED MINUS 4,Trace a narrower U shape shifted down,steeper parabola opening up

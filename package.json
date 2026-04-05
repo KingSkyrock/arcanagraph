@@ -14,5 +14,9 @@
   "devDependencies": {
     "concurrently": "9.2.1",
     "firebase-tools": "14.20.0"
+  },
+  "dependencies": {
+    "firebase": "^12.11.0",
+    "socket.io-client": "^4.8.3"
   }
 }

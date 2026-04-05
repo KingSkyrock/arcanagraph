@@ -1,9 +1,16 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Suspense } from 'react';
+import { apiUrl } from '@/lib/api';
 import Navbar from '@/components/Navbar';
+import {
+  formatSkillFamilyLabel,
+  listSkillFamilies,
+  parseEquationCsv,
+} from '../game/[lobbyId]/graph-battle';
+import { PlayClient } from './play-client';
 
-// Reuse the same background pattern from the Home page for consistency
 function BgPattern() {
   const items = [
     { s: '∫', x: '6%', y: '20%', r: -15, sz: 28 },
@@ -37,14 +44,93 @@ function BgPattern() {
 export default function PlayPage() {
   const [step, setStep] = useState('mode');
   const [mode, setMode] = useState<string | null>(null);
+  const [customSkillFamilies, setCustomSkillFamilies] = useState<
+    Array<{ id: string; label: string; count: number }>
+  >([]);
+  const [customLoading, setCustomLoading] = useState(false);
+  const [customError, setCustomError] = useState('');
   const router = useRouter();
 
-  function goToWebcam() {
-    router.push('/webcam');
+  useEffect(() => {
+    const activeLobbyId = new URLSearchParams(window.location.search).get('lobby');
+
+    if (activeLobbyId) {
+      setMode('battle');
+      setStep('lobby');
+    }
+  }, []);
+
+  function goToSolo(skillFamily?: string) {
+    const params = new URLSearchParams();
+
+    if (skillFamily) {
+      params.set('skillFamily', skillFamily);
+    }
+
+    router.push(params.size ? `/game/solo?${params.toString()}` : '/game/solo');
   }
 
-  // Common Lego styles to avoid repetition
-  const getLegoStyle = (bg: string, shadow: string, isSmall = false) => ({
+  async function openCustomSolo() {
+    if (customSkillFamilies.length) {
+      setStep('custom');
+      return;
+    }
+
+    setCustomLoading(true);
+    setCustomError('');
+
+    try {
+      const response = await fetch(apiUrl('/data/advanced_equations.csv'), {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Could not load custom skill families (${response.status}).`,
+        );
+      }
+
+      const csv = await response.text();
+      const families = parseEquationCsv(csv);
+      const familyIds = listSkillFamilies(families);
+
+      if (!familyIds.length) {
+        throw new Error(
+          'The advanced equation bank does not contain any skill families yet.',
+        );
+      }
+
+      const counts = families.reduce<Record<string, number>>((accumulator, family) => {
+        const id = family.skill_family.trim();
+
+        if (!id) {
+          return accumulator;
+        }
+
+        accumulator[id] = (accumulator[id] ?? 0) + 1;
+        return accumulator;
+      }, {});
+
+      setCustomSkillFamilies(
+        familyIds.map((id) => ({
+          id,
+          label: formatSkillFamilyLabel(id),
+          count: counts[id] ?? 0,
+        })),
+      );
+      setStep('custom');
+    } catch (loadError) {
+      setCustomError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'Could not load custom skill families.',
+      );
+    } finally {
+      setCustomLoading(false);
+    }
+  }
+
+  const getLegoStyle = (bg: string, shadow: string, isSmall = false): React.CSSProperties => ({
     textDecoration: 'none',
     background: bg,
     color: 'rgb(255, 255, 255)',
@@ -82,6 +168,34 @@ export default function PlayPage() {
     e.currentTarget.style.transform = 'translateY(4px)';
     e.currentTarget.style.boxShadow = `0 0px 0px ${shadow}, 0 2px 4px rgba(0, 0, 0, 0.2)`;
   };
+
+  // Battle mode shows the lobby flow
+  if (mode === 'battle' && step === 'lobby') {
+    return (
+      <main style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, rgb(37, 99, 235) 0%, rgb(59, 130, 246) 100%)',
+        color: 'rgb(255, 255, 255)',
+        position: 'relative',
+        overflow: 'hidden',
+        padding: '112px 28px 36px',
+      }}>
+        <Navbar />
+        <BgPattern />
+        <div style={{ position: 'relative', zIndex: 10, maxWidth: 900, margin: '0 auto' }}>
+          <button
+            onClick={() => { setStep('mode'); setMode(null); }}
+            style={{ marginBottom: 24, background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline', fontSize: 16 }}
+          >
+            Back to Mode Selection
+          </button>
+          <Suspense fallback={<div style={{ textAlign: 'center', fontWeight: 700, padding: 48 }}>Loading lobby tools...</div>}>
+            <PlayClient />
+          </Suspense>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main style={{
@@ -127,8 +241,7 @@ export default function PlayPage() {
               fontFamily: "'Impact', 'Arial Black', sans-serif",
               fontSize: 56, color: 'rgb(255, 255, 255)', marginBottom: 20
             }}>Pick Your Quest</h2>
-            
-            {/* SOLO BUTTON - Blue Lego */}
+
             <button
               style={getLegoStyle('rgb(228, 111, 166)', 'rgb(216, 29, 85)')}
               onMouseEnter={e => handleMouseEnter(e, 'rgb(228, 111, 166)', false, 'rgb(216, 29, 85)')}
@@ -140,7 +253,6 @@ export default function PlayPage() {
               SOLO
             </button>
 
-            {/* BATTLE BUTTON - Amber Lego */}
             <button
               style={getLegoStyle('rgb(241, 116, 88)', 'rgb(234, 61, 22)')}
               onMouseEnter={e => handleMouseEnter(e, 'rgb(241, 116, 88)', false, 'rgb(234, 61, 22)')}
@@ -169,55 +281,132 @@ export default function PlayPage() {
 
             <div style={{ fontWeight: 700, color: 'rgb(248, 247, 250)', fontSize: 16, marginBottom: 8, width: '100%', maxWidth: 380 }}>Presets</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', alignItems: 'center', marginBottom: 32 }}>
-              
-              {/* SHAPES - Green Lego */}
+
               <button
                 style={getLegoStyle('rgb(34, 197, 94)', 'rgb(21, 128, 61)', true)}
                 onMouseEnter={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(34, 197, 94)', 'rgb(21, 128, 61)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(21, 128, 61)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
-                onClick={goToWebcam}
+                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
               >Shapes</button>
 
-              {/* BEGINNER - Orange Lego */}
               <button
                 style={getLegoStyle('rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}
                 onMouseEnter={e => handleMouseEnter(e, 'rgb(180, 83, 9)', true, 'rgb(217, 119, 6)')}
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(180, 83, 9)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(180, 83, 9)', true, 'rgb(217, 119, 6)')}
-                onClick={goToWebcam}
+                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
               >Beginner Functions</button>
 
-              {/* ADVANCED - Red Lego */}
               <button
                 style={getLegoStyle('rgb(239, 104, 104)', 'rgb(185, 28, 28)', true)}
                 onMouseEnter={e => handleMouseEnter(e, 'rgb(185, 28, 28)', true, 'rgb(220, 38, 38)')}
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(239, 104, 104)', 'rgb(185, 28, 28)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(185, 28, 28)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(185, 28, 28)', true, 'rgb(220, 38, 38)')}
-                onClick={goToWebcam}
+                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
               >Advanced Functions</button>
             </div>
 
             <div style={{ fontWeight: 700, color: 'rgb(224, 224, 242)', fontSize: 16, marginBottom: 8, width: '100%', maxWidth: 380 }}>Custom</div>
-            
-            {/* CUSTOM - Purple Lego */}
+
             <button
               style={getLegoStyle('rgb(162, 28, 175)', 'rgb(112, 26, 117)', true)}
               onMouseEnter={e => handleMouseEnter(e, 'rgb(112, 26, 117)', true, 'rgb(134, 25, 143)')}
               onMouseLeave={e => handleMouseLeave(e, 'rgb(162, 28, 175)', 'rgb(112, 26, 117)', true)}
               onMouseDown={e => handleMouseDown(e, 'rgb(112, 26, 117)')}
               onMouseUp={e => handleMouseEnter(e, 'rgb(112, 26, 117)', true, 'rgb(134, 25, 143)')}
-              onClick={goToWebcam}
-            >Custom</button>
+              onClick={() => mode === 'battle' ? setStep('lobby') : void openCustomSolo()}
+              disabled={customLoading}
+            >{customLoading ? 'Loading...' : 'Custom'}</button>
 
-            <button 
-              onClick={() => setStep('mode')}
+            {customError ? (
+              <p style={{
+                marginTop: 16,
+                maxWidth: 420,
+                textAlign: 'center',
+                color: 'rgb(255, 235, 235)',
+                fontWeight: 700,
+                lineHeight: 1.5,
+              }}>
+                {customError}
+              </p>
+            ) : null}
+
+            <button
+              onClick={() => { setStep('mode'); setMode(null); }}
               style={{ marginTop: 40, background: 'none', border: 'none', color: 'rgb(255, 255, 255)', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline' }}
             >
               Back to Mode Selection
+            </button>
+          </div>
+        )}
+
+        {step === 'custom' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+            <h2 style={{
+              fontFamily: "'Impact', 'Arial Black', sans-serif",
+              fontSize: 48, color: 'rgb(222, 218, 252)', marginBottom: 18,
+            }}>Choose Skill Family</h2>
+
+            <p style={{
+              maxWidth: 520,
+              textAlign: 'center',
+              color: 'rgb(240, 240, 255)',
+              fontSize: 16,
+              fontWeight: 600,
+              lineHeight: 1.6,
+              marginBottom: 28,
+            }}>
+              Custom solo practice will only pull equations from the skill family you choose here.
+            </p>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 18,
+              width: 'min(100%, 760px)',
+            }}>
+              {customSkillFamilies.map((family, index) => {
+                const palette = [
+                  ['rgb(34, 197, 94)', 'rgb(21, 128, 61)', 'rgb(22, 163, 74)'],
+                  ['rgb(245, 158, 11)', 'rgb(180, 83, 9)', 'rgb(217, 119, 6)'],
+                  ['rgb(239, 104, 104)', 'rgb(185, 28, 28)', 'rgb(220, 38, 38)'],
+                  ['rgb(162, 28, 175)', 'rgb(112, 26, 117)', 'rgb(134, 25, 143)'],
+                ] as const;
+                const [bg, shadow, hoverBg] = palette[index % palette.length] ?? palette[0];
+
+                return (
+                  <button
+                    key={family.id}
+                    style={{
+                      ...getLegoStyle(bg, shadow, true),
+                      flexDirection: 'column',
+                      minHeight: 118,
+                      padding: '22px 24px',
+                    }}
+                    onMouseEnter={e => handleMouseEnter(e, shadow, true, hoverBg)}
+                    onMouseLeave={e => handleMouseLeave(e, bg, shadow, true)}
+                    onMouseDown={e => handleMouseDown(e, shadow)}
+                    onMouseUp={e => handleMouseEnter(e, shadow, true, hoverBg)}
+                    onClick={() => goToSolo(family.id)}
+                  >
+                    <span>{family.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, opacity: 0.84 }}>
+                      {family.count} templates
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setStep('type')}
+              style={{ marginTop: 40, background: 'none', border: 'none', color: 'rgb(255, 255, 255)', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline' }}
+            >
+              Back to Difficulty Selection
             </button>
           </div>
         )}

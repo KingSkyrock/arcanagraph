@@ -1,0 +1,425 @@
+.page {
+  min-height: 100vh;
+  padding: 28px;
+  background: linear-gradient(180deg, #1877f2 0%, #2d87ff 55%, #4f9bff 100%);
+  color: #fff;
+}
+
+.shell {
+  display: grid;
+  gap: 22px;
+  width: min(100%, 1180px);
+  margin: 0 auto;
+}
+
+.hero,
+.panel {
+  display: grid;
+  gap: 16px;
+  padding: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 30px;
+  background: rgba(11, 31, 92, 0.24);
+  box-shadow:
+    0 28px 60px rgba(10, 20, 68, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+.cvPanel {
+  display: grid;
+  gap: 16px;
+  padding: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 30px;
+  background: rgba(11, 31, 92, 0.24);
+  box-shadow:
+    0 28px 60px rgba(10, 20, 68, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
+}
+
+.kicker,
+.label,
+.summaryCard span,
+.meta,
+.fighterIdentity small,
+.selfTag {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.hero h1,
+.panel h2 {
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+  color: #fff;
+}
+
+.hero h1 {
+  font-size: clamp(54px, 8vw, 96px);
+  font-family: "Impact", "Arial Black", "Oswald", system-ui, sans-serif;
+}
+
+.panel h2 {
+  font-size: clamp(28px, 4vw, 48px);
+}
+
+.copy,
+.muted,
+.error,
+.result {
+  font-size: 16px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.error {
+  color: #fca5a5;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.linkButton,
+.attackButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    background 180ms ease-out;
+}
+
+.linkButton {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.attackButton {
+  background: #f59e0b;
+  color: #fff;
+  box-shadow: 0 4px 0 #b45309, 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.linkButton:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.attackButton:hover:enabled {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #b45309, 0 8px 16px rgba(0, 0, 0, 0.2);
+  background: #d97706;
+}
+
+.attackButton:disabled,
+.linkButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.state,
+.badge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.18);
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff3c4;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cvBattleLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+.cvBattleLayoutSolo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.cvContainer {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 860 / 620;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #0a0a1a;
+}
+
+.cvVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.cvGrid,
+.cvDrawing,
+.cvOverlay {
+  position: absolute;
+  top: 11.29%;
+  left: 12.79%;
+  width: 74.42%;
+  height: 77.42%;
+}
+
+.cvOverlay,
+.cvDrawing {
+  transform: scaleX(-1);
+}
+
+.cvGrid {
+  pointer-events: none;
+  mix-blend-mode: difference;
+}
+
+.cvSideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cvOpponent {
+  padding: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.24);
+  border-radius: 18px;
+  background: rgba(11, 31, 92, 0.4);
+  color: #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cvOpponentCard {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+}
+
+.cvOpponentCard strong {
+  font-size: 26px;
+  line-height: 0.98;
+}
+
+.cvEquation {
+  padding: 12px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 18px;
+  background: rgba(11, 31, 92, 0.6);
+  color: #e0e0e0;
+  text-align: center;
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cvEquation :global(.katex-display) {
+  margin: 0;
+}
+
+.cvControls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.cvControlGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.scoreDisplay {
+  padding: 8px 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.cvAttackCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.summaryCard strong {
+  font-size: 24px;
+  line-height: 1;
+  color: #fff;
+}
+
+.fighterGrid {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.fighterCard {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.fighterHeader,
+.actionRow,
+.healthRow {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fighterIdentity {
+  display: grid;
+  gap: 6px;
+}
+
+.fighterIdentity strong {
+  font-size: 28px;
+  line-height: 1;
+  color: #fff;
+}
+
+.healthTrack {
+  position: relative;
+  width: 100%;
+  min-height: 24px;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  background: rgba(255, 100, 100, 0.12);
+}
+
+.healthFill {
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff6b6b, #ff4d4d 60%, #c1121f);
+  transition: width 180ms ease;
+}
+
+.meta {
+  letter-spacing: 0.08em;
+}
+
+.selfTag {
+  letter-spacing: 0.08em;
+}
+
+.result {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+  color: #fff;
+}
+
+.resultActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cvBattleLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 20px;
+  }
+
+  .hero,
+  .panel,
+  .cvPanel {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .panelHeader,
+  .fighterHeader,
+  .actionRow,
+  .healthRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .attackButton,
+  .linkButton {
+    width: 100%;
+  }
+
+  .cvOpponent {
+    min-height: 180px;
+  }
+
+  .cvEquation {
+    min-height: 88px;
+    padding: 14px;
+  }
+
+  .cvControlGroup {
+    width: 100%;
+  }
+}

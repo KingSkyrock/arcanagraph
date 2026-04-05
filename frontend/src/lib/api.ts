@@ -1,6 +1,6 @@
 const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-const apiBaseUrl =
+export const apiBaseUrl =
   rawApiBaseUrl === undefined ? "http://localhost:4000" : rawApiBaseUrl.trim();
 
 export function apiUrl(path: string) {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 import { LoginForm } from "./login-form";
 import styles from "./page.module.css";
 
@@ -10,40 +11,47 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className={styles.page}>
-      <section className={styles.shell}>
-        <div className={styles.hero}>
-          <div className={styles.heroCopy}>
-            <p className={styles.brand}>✦ Component 1</p>
-            <h1>Login to the arena.</h1>
-            <p className={styles.copy}>
-              Neon auth for the demo now, shared sessions for multiplayer
-              sockets next. User records already track wins, losses, and games
-              played.
-            </p>
-            <Link className={styles.homeLink} href="/">
-              Back to home
-            </Link>
+    <>
+      <Navbar />
+      <main className={styles.page} style={{ paddingTop: 112 }}>
+        <section className={styles.shell}>
+          <div className={styles.hero}>
+            <div className={styles.heroCopy}>
+              <p className={styles.brand}>✦ Arcanagraph</p>
+              <h1>Login to the arena.</h1>
+              <p className={styles.copy}>
+                Sign in or create a player account to track your wins, losses,
+                XP, level, and class rank across multiplayer matches.
+              </p>
+              <div className={styles.heroLinks}>
+                <Link className={styles.homeLink} href="/">
+                  Back to home
+                </Link>
+                <Link className={styles.homeLink} href="/play">
+                  Play now
+                </Link>
+              </div>
+            </div>
+
+            <div className={styles.blockField} aria-hidden="true">
+              <span className={styles.blockOne} />
+              <span className={styles.blockTwo} />
+              <span className={styles.blockThree} />
+              <span className={styles.blockFour} />
+              <span className={styles.blockFive} />
+              <span className={styles.blockSix} />
+              <span className={styles.blockSeven} />
+              <span className={styles.blockEight} />
+              <span className={styles.blockNine} />
+              <span className={styles.blockTen} />
+              <span className={styles.blockEleven} />
+              <span className={styles.blockTwelve} />
+            </div>
           </div>
 
-          <div className={styles.blockField} aria-hidden="true">
-            <span className={styles.blockOne} />
-            <span className={styles.blockTwo} />
-            <span className={styles.blockThree} />
-            <span className={styles.blockFour} />
-            <span className={styles.blockFive} />
-            <span className={styles.blockSix} />
-            <span className={styles.blockSeven} />
-            <span className={styles.blockEight} />
-            <span className={styles.blockNine} />
-            <span className={styles.blockTen} />
-            <span className={styles.blockEleven} />
-            <span className={styles.blockTwelve} />
-          </div>
-        </div>
-
-        <LoginForm />
-      </section>
-    </main>
+          <LoginForm />
+        </section>
+      </main>
+    </>
   );
 }
