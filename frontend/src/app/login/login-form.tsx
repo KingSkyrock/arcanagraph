@@ -9,19 +9,10 @@ import {
 } from "firebase/auth";
 import { apiUrl } from "@/lib/api";
 import { firebaseConfigReady, getFirebaseAuth } from "@/lib/firebase-client";
+import type { AppUser } from "@/lib/types";
 import styles from "./page.module.css";
 
 type Mode = "sign-in" | "create-account";
-
-type AppUser = {
-  id: string;
-  firebaseUid: string;
-  email: string | null;
-  displayName: string | null;
-  wins: number;
-  losses: number;
-  gamesPlayed: number;
-};
 
 type LeaderboardResponse = {
   leaderboard: AppUser[];
@@ -35,8 +26,42 @@ function formatPlayerName(user: AppUser) {
   return user.displayName || user.email || user.firebaseUid;
 }
 
+function formatPlayerRank(user: AppUser) {
+  return `Level ${user.level} ${user.className} · ${user.xp} XP`;
+}
+
 async function readJson<T>(response: Response) {
   return (await response.json()) as T & { error?: string };
+}
+
+function getAuthErrorMessage(error: unknown, mode: Mode) {
+  const code =
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+      ? error.code
+      : "";
+
+  switch (code) {
+    case "auth/user-not-found":
+    case "auth/invalid-credential":
+      return mode === "sign-in"
+        ? "No player exists for that email in the current Firebase auth target. Use Register first, or make sure you're signing into the same emulator/project."
+        : "That player account could not be found.";
+    case "auth/email-already-in-use":
+      return "That email already has a player account. Switch to Login instead.";
+    case "auth/wrong-password":
+      return "That password does not match the player account.";
+    case "auth/invalid-email":
+      return "That email address is not valid.";
+    case "auth/weak-password":
+      return "Use a password with at least 6 characters.";
+    case "auth/network-request-failed":
+      return "Could not reach Firebase. Make sure the auth emulator or project is running.";
+    default:
+      return error instanceof Error ? error.message : "Authentication failed.";
+  }
 }
 
 export function LoginForm() {
@@ -145,12 +170,19 @@ export function LoginForm() {
       setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
       await loadLeaderboard();
     } catch (submitError) {
-      console.error(submitError);
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Authentication failed.",
-      );
+      const message = getAuthErrorMessage(submitError, mode);
+
+      if (
+        !(
+          typeof submitError === "object" &&
+          submitError !== null &&
+          "code" in submitError
+        )
+      ) {
+        console.error(submitError);
+      }
+
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -256,10 +288,15 @@ export function LoginForm() {
         <strong>{status}</strong>
         {user ? (
           <div className={styles.record}>
-            <span>{formatPlayerName(user)}</span>
-            <span>
-              {user.wins}W / {user.losses}L / {user.gamesPlayed} GP
-            </span>
+            <div className={styles.recordBlock}>
+              <span>{formatPlayerName(user)}</span>
+              <small>{formatPlayerRank(user)}</small>
+            </div>
+            <div className={styles.recordBlock}>
+              <span>
+                {user.wins}W / {user.losses}L / {user.gamesPlayed} GP
+              </span>
+            </div>
           </div>
         ) : null}
         {error ? <p className={styles.error}>{error}</p> : null}
@@ -278,7 +315,7 @@ export function LoginForm() {
       <div className={styles.leaderboard}>
         <div className={styles.leaderboardHeader}>
           <p className={styles.panelLabel}>Leaderboard</p>
-          <span>Wins / Losses / Games</span>
+          <span>Rank / XP / Record</span>
         </div>
 
         {leaderboard.length ? (
@@ -286,7 +323,10 @@ export function LoginForm() {
             {leaderboard.map((entry, index) => (
               <li key={entry.id} className={styles.leaderboardItem}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{formatPlayerName(entry)}</strong>
+                <div className={styles.leaderboardMeta}>
+                  <strong>{formatPlayerName(entry)}</strong>
+                  <small>{formatPlayerRank(entry)}</small>
+                </div>
                 <span>
                   {entry.wins} / {entry.losses} / {entry.gamesPlayed}
                 </span>

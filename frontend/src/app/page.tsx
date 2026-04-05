@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
 import Navbar from '@/components/Navbar'; // Use the shared component
 import Link from 'next/link';
 import Image from 'next/image';
@@ -104,7 +103,7 @@ function HeroSection() {
           fontFamily: "'Nunito', system-ui, sans-serif",
         }}>
           Unlocking Potential. Your Partner in<br />
-          Cultivating Your Child's Math Journey
+          Cultivating Your Child&apos;s Math Journey
         </p>
 
         {/* PLAY NOW — amber pill with strong drop shadow like reference */}
@@ -165,16 +164,18 @@ function HeroSection() {
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         zIndex: 5, pointerEvents: 'none',
       }}>
-        <img
+        <Image
           src="/images/logo.png"
           alt="Icon Elephant"
+          width={580}
+          height={580}
+          priority
           style={{
             width: '60%',
+            height: 'auto',
             maxWidth: 580,
             objectFit: 'contain',
             objectPosition: 'bottom',
-            // mix-blend-mode screen makes the black background of the PNG transparent
-            // so the elephant floats naturally on the blue background
             mixBlendMode: 'screen',
             filter: 'brightness(1.05)',
             pointerEvents: 'none',
@@ -196,7 +197,9 @@ function HeroSection() {
         onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.78)'}
       >
         <span>Leaderboard</span>
-        <ChevronDown size={24} style={{ animation: 'bounce 1.8s ease-in-out infinite' }} />
+        <span style={{ fontSize: 24, lineHeight: 1, animation: 'bounce 1.8s ease-in-out infinite' }}>
+          ↓
+        </span>
       </button>
 
       <style>{`
