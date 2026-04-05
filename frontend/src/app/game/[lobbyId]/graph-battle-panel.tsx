@@ -413,7 +413,9 @@ export function GraphBattlePanel({
     let nonDomHover: { powerupId: string; startTime: number } | null = null;
     let powerupFeedback: { text: string; color: string; startTime: number } | null = null;
     const COLLECT_HOVER_MS = 1000;
-    const POWERUP_PROXIMITY_PX = 24; // 0.4 math units * 60 pxPerUnit
+    const POWERUP_PROXIMITY_PX = 40; // ~0.67 math units — generous for fist/palm
+    let nonDomSmoothed: Point | null = null;
+    const NON_DOM_EMA = 0.35;
 
     // bridge socket events into the detect() closure via custom events
     const onPowerupSpawn = (e: Event) => {
@@ -1367,10 +1369,20 @@ export function GraphBattlePanel({
           }
           if (bestNonDomIndex >= 0) {
             const lm = results.landmarks[bestNonDomIndex]!;
-            nonDominantPos = {
-              x: lm[8]!.x * VIDEO_WIDTH - DRAW_OFFSET_X,
-              y: lm[8]!.y * VIDEO_HEIGHT - DRAW_OFFSET_Y,
-            };
+            // use palm center (avg of wrist + MCP joints) — stable even in a fist
+            const palmX = (lm[0]!.x + lm[5]!.x + lm[9]!.x + lm[13]!.x + lm[17]!.x) / 5;
+            const palmY = (lm[0]!.y + lm[5]!.y + lm[9]!.y + lm[13]!.y + lm[17]!.y) / 5;
+            let rawX = palmX * VIDEO_WIDTH - DRAW_OFFSET_X;
+            let rawY = palmY * VIDEO_HEIGHT - DRAW_OFFSET_Y;
+            // EMA smoothing to prevent jitter
+            if (nonDomSmoothed) {
+              rawX = nonDomSmoothed.x + NON_DOM_EMA * (rawX - nonDomSmoothed.x);
+              rawY = nonDomSmoothed.y + NON_DOM_EMA * (rawY - nonDomSmoothed.y);
+            }
+            nonDomSmoothed = { x: rawX, y: rawY };
+            nonDominantPos = nonDomSmoothed;
+          } else {
+            nonDomSmoothed = null; // reset when hand not found
           }
         }
 

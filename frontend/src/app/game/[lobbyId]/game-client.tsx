@@ -583,6 +583,29 @@ export function GameClient({ lobbyId }: GameClientProps) {
         </div>
       </section>
 
+      {/* Eliminated overlay: player died but match is still going */}
+      {lobby?.match?.status === "active" && currentMatchPlayer && currentMatchPlayer.health <= 0 ? (
+        <div className={styles.victoryOverlay}>
+          <div className={styles.victoryCard}>
+            <h1 className={styles.victoryTitle} style={{ color: "#ff4d4d" }}>
+              DEFEATED
+            </h1>
+            <p className={styles.victorySubtitle}>
+              You have been eliminated. The match is still in progress.
+            </p>
+            {lastActionMessage ? (
+              <p className={styles.muted} style={{ textAlign: "center" }}>{lastActionMessage}</p>
+            ) : null}
+            <div className={styles.resultActions} style={{ justifyContent: "center", marginTop: 12 }}>
+              <Link className={styles.linkButton} href="/play">
+                Leave Match
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Match finished overlay */}
       {lobby?.match?.status === "finished" ? (
         <div className={styles.victoryOverlay}>
           <div className={styles.victoryCard}>
