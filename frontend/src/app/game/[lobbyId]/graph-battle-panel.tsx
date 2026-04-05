@@ -7,6 +7,7 @@ import type {
   HandLandmarker,
   NormalizedLandmark,
 } from "@mediapipe/tasks-vision";
+import type { Socket } from "socket.io-client";
 import { apiUrl } from "@/lib/api";
 import type { LobbyMatch, LobbyPlayer } from "@/lib/types";
 import styles from "./page.module.css";
@@ -29,7 +30,10 @@ type GraphBattlePanelProps = {
   opponents: LobbyPlayer[];
   selectedTargetId: string | null;
   disabled: boolean;
+  solo?: boolean;
   onSuccessfulScore: (targetUserId: string, score: number) => Promise<void>;
+  socket?: Socket | null;
+  lobbyId?: string;
 };
 
 type GradeAnimation = {
@@ -98,10 +102,14 @@ export function GraphBattlePanel({
   opponents,
   selectedTargetId,
   disabled,
+  solo = false,
   onSuccessfulScore,
+  socket,
+  lobbyId,
 }: GraphBattlePanelProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const opponentContainerRef = useRef<HTMLDivElement | null>(null);
+  const opponentCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const gridRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef<HTMLCanvasElement | null>(null);
@@ -111,6 +119,7 @@ export function GraphBattlePanel({
   const selectedTargetNameRef = useRef("No target selected");
   const disabledRef = useRef(disabled);
   const onSuccessfulScoreRef = useRef(onSuccessfulScore);
+  const soloRef = useRef(solo);
   const resetSessionRef = useRef<() => void>(() => undefined);
   const nextEquationRef = useRef<() => void>(() => undefined);
   const animationFrameRef = useRef<number | null>(null);
@@ -118,6 +127,7 @@ export function GraphBattlePanel({
   const familiesRef = useRef<EquationFamily[]>([]);
   const equationConfigRef = useRef<EquationConfig | null>(null);
   const [trackingStatus, setTrackingStatus] = useState("Loading graph battle...");
+  const [cameraBlocked, setCameraBlocked] = useState(false);
   const [scoreDisplay, setScoreDisplay] = useState("");
   const [equationMarkup, setEquationMarkup] = useState("");
   const [localError, setLocalError] = useState("");
@@ -151,13 +161,17 @@ export function GraphBattlePanel({
   }, [onSuccessfulScore]);
 
   useEffect(() => {
+    soloRef.current = solo;
+  }, [solo]);
+
+  useEffect(() => {
     const video = videoRef.current!;
     const gridCanvas = gridRef.current;
     const drawCanvas = drawingRef.current;
     const overlayCanvas = overlayRef.current;
     const attackCanvas = attackCanvasRef.current!;
     const battleContainer = containerRef.current!;
-    const targetContainer = opponentContainerRef.current!;
+    const targetContainer = opponentContainerRef.current;
 
     if (
       !video ||
@@ -165,8 +179,7 @@ export function GraphBattlePanel({
       !drawCanvas ||
       !overlayCanvas ||
       !attackCanvas ||
-      !battleContainer ||
-      !targetContainer
+      !battleContainer
     ) {
       return;
     }
@@ -338,7 +351,7 @@ export function GraphBattlePanel({
     }
 
     function launchAttack(score: number) {
-      if (score < 50) {
+      if (score < 50 || !targetContainer) {
         return;
       }
 
@@ -724,7 +737,12 @@ export function GraphBattlePanel({
         video: { width: DRAW_WIDTH, height: DRAW_HEIGHT },
       });
       runtimeVideo.srcObject = stream;
-      await runtimeVideo.play();
+
+      await new Promise<void>((resolve) => {
+        runtimeVideo.addEventListener("loadeddata", () => resolve(), { once: true });
+        runtimeVideo.play().catch(() => resolve());
+      });
+
       setTrackingStatus("Draw with your index finger, then hold an open palm to grade.");
     }
 
@@ -736,13 +754,27 @@ export function GraphBattlePanel({
       const now = performance.now();
       updateAndDrawAttack();
 
-      if (runtimeVideo.currentTime === lastVideoTime) {
+      if (
+        runtimeVideo.currentTime === lastVideoTime ||
+        runtimeVideo.videoWidth === 0 ||
+        runtimeVideo.videoHeight === 0
+      ) {
         animationFrameRef.current = window.requestAnimationFrame(detect);
         return;
       }
 
       lastVideoTime = runtimeVideo.currentTime;
-      const results = handLandmarker.detectForVideo(runtimeVideo, now);
+
+      let results;
+      try {
+        results = handLandmarker.detectForVideo(runtimeVideo, now);
+      } catch {
+        // Video element may be in a transient bad state (e.g. after strict-mode
+        // remount).  Skip this frame rather than killing the detection loop.
+        animationFrameRef.current = window.requestAnimationFrame(detect);
+        return;
+      }
+
       gestureFrameCount += 1;
 
       if (gestureRecognizer && gestureFrameCount % 3 === 0) {
@@ -770,6 +802,13 @@ export function GraphBattlePanel({
 
       const hasDrawing = trails.Left.some((point) => point !== null) || trails.Right.some((point) => point !== null);
 
+      // Keep refreshing the countdown start while there's nothing to grade.
+      // This prevents stale openPalmStart from triggering an instant score
+      // after scheduleNextRound resets the session and clears the drawing.
+      if (openPalmDetected && openPalmStart > 0 && !hasDrawing) {
+        openPalmStart = now;
+      }
+
       if (
         openPalmDetected &&
         openPalmStart > 0 &&
@@ -791,12 +830,30 @@ export function GraphBattlePanel({
         const animationDuration = score.total < 50 ? 3500 : 2000;
         gradeAnim = { score: score.total, startTime: now, duration: animationDuration };
 
-        if (score.total >= 50 && selectedTargetIdRef.current && !disabledRef.current) {
+        if (soloRef.current) {
+          // Solo mode: just show the score, no attack logic
+          if (score.total >= 50) {
+            setTrackingStatus(`Nice trace! You scored ${score.total}%.`);
+          } else {
+            setTrackingStatus(`Score: ${score.total}%. Try to get above 50%!`);
+          }
+          setLocalError("");
+        } else if (score.total >= 50 && selectedTargetIdRef.current && !disabledRef.current) {
           const targetUserId = selectedTargetIdRef.current;
           const targetName = selectedTargetNameRef.current;
 
           setLockedTargetId(targetUserId);
-          launchAttack(score.total);
+          // Launch attack after 900ms delay to let the count-up animation finish first,
+          // matching the original computervision/index.html timing.
+          registerTimeout(
+            window.setTimeout(() => {
+              if (cancelled) {
+                return;
+              }
+
+              launchAttack(score.total);
+            }, 900),
+          );
           registerTimeout(
             window.setTimeout(() => {
               if (!targetUserId || cancelled) {
@@ -1100,6 +1157,8 @@ export function GraphBattlePanel({
           credentials: "include",
         });
 
+        if (cancelled) return;
+
         if (!equationResponse.ok) {
           throw new Error(
             `Could not load graph equations (${equationResponse.status}). The battle prompts are unavailable right now.`,
@@ -1118,10 +1177,18 @@ export function GraphBattlePanel({
         familiesRef.current = families;
         drawGrid(gridContext);
         chooseNextEquation();
+
+        if (cancelled) return;
+
         setTrackingStatus("Loading MediaPipe hand tracking...");
 
         const visionModule = await import("@mediapipe/tasks-vision");
-        const vision = await visionModule.FilesetResolver.forVisionTasks("/mediapipe/wasm");
+        if (cancelled) return;
+
+        const vision = await visionModule.FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
+        );
+        if (cancelled) return;
 
         handLandmarker = await visionModule.HandLandmarker.createFromOptions(vision, {
           baseOptions: {
@@ -1131,6 +1198,7 @@ export function GraphBattlePanel({
           runningMode: "VIDEO",
           numHands: 2,
         });
+        if (cancelled) { handLandmarker.close(); handLandmarker = null; return; }
 
         gestureRecognizer = await visionModule.GestureRecognizer.createFromOptions(vision, {
           baseOptions: {
@@ -1140,6 +1208,7 @@ export function GraphBattlePanel({
           runningMode: "VIDEO",
           numHands: 1,
         });
+        if (cancelled) { gestureRecognizer.close(); gestureRecognizer = null; return; }
 
         setTrackingStatus("MediaPipe loaded. Starting camera...");
         await startCamera();
@@ -1149,10 +1218,16 @@ export function GraphBattlePanel({
         }
       } catch (error) {
         if (!cancelled) {
+          const msg = error instanceof Error ? error.message : "";
+          const isDenied =
+            msg.includes("Permission denied") ||
+            msg.includes("NotAllowedError") ||
+            msg.includes("not available");
+          setCameraBlocked(isDenied || !navigator.mediaDevices?.getUserMedia);
           setLocalError(
-            error instanceof Error
-              ? error.message
-              : "The graph battle camera could not be initialized.",
+            isDenied
+              ? "Camera access was denied. Click the button above to try again."
+              : msg || "The graph battle camera could not be initialized.",
           );
           setTrackingStatus("Graph battle is offline.");
         }
@@ -1191,6 +1266,96 @@ export function GraphBattlePanel({
     };
   }, []);
 
+  // Frame streaming: capture composite frames and send to opponent via socket
+  useEffect(() => {
+    if (!socket || !lobbyId || solo) {
+      return;
+    }
+
+    const video = videoRef.current;
+    const drawCanvas = drawingRef.current;
+    const gridCanvas = gridRef.current;
+    const overlayCanvas = overlayRef.current;
+    const opponentCanvas = opponentCanvasRef.current;
+
+    if (!video || !drawCanvas || !gridCanvas || !overlayCanvas || !opponentCanvas) {
+      return;
+    }
+
+    const opponentCtx = opponentCanvas.getContext("2d");
+
+    if (!opponentCtx) {
+      return;
+    }
+
+    // Offscreen canvas for compositing outgoing frames
+    const offscreen = document.createElement("canvas");
+    offscreen.width = 320;
+    offscreen.height = 240;
+    const offCtx = offscreen.getContext("2d")!;
+
+    // Proportional mapping from 860x620 video space to 320x240 thumbnail
+    const subX = (DRAW_OFFSET_X / VIDEO_WIDTH) * 320;
+    const subY = (DRAW_OFFSET_Y / VIDEO_HEIGHT) * 240;
+    const subW = (DRAW_WIDTH / VIDEO_WIDTH) * 320;
+    const subH = (DRAW_HEIGHT / VIDEO_HEIGHT) * 240;
+
+    // Capture and emit composite frame every 250ms (~4fps)
+    const captureInterval = window.setInterval(() => {
+      if (!video.srcObject || video.readyState < 2) {
+        return;
+      }
+
+      offCtx.clearRect(0, 0, 320, 240);
+
+      // Draw mirrored video (match what the player sees)
+      offCtx.save();
+      offCtx.translate(320, 0);
+      offCtx.scale(-1, 1);
+      offCtx.drawImage(video, 0, 0, 320, 240);
+      offCtx.restore();
+
+      // Draw grid, trails, and overlay in the sub-region (also mirrored)
+      offCtx.save();
+      offCtx.translate(subX + subW, subY);
+      offCtx.scale(-1, 1);
+      offCtx.drawImage(gridCanvas, 0, 0, DRAW_WIDTH, DRAW_HEIGHT, 0, 0, subW, subH);
+      offCtx.restore();
+
+      offCtx.save();
+      offCtx.translate(subX + subW, subY);
+      offCtx.scale(-1, 1);
+      offCtx.drawImage(drawCanvas, 0, 0, DRAW_WIDTH, DRAW_HEIGHT, 0, 0, subW, subH);
+      offCtx.restore();
+
+      offCtx.save();
+      offCtx.translate(subX + subW, subY);
+      offCtx.scale(-1, 1);
+      offCtx.drawImage(overlayCanvas, 0, 0, DRAW_WIDTH, DRAW_HEIGHT, 0, 0, subW, subH);
+      offCtx.restore();
+
+      const frame = offscreen.toDataURL("image/jpeg", 0.35);
+      socket.volatile.emit("game:frame", { lobbyId, frame });
+    }, 250);
+
+    // Receive opponent frames and draw to opponent canvas
+    const handleFrame = ({ frame }: { userId: string; frame: string }) => {
+      const img = new Image();
+      img.onload = () => {
+        opponentCtx.clearRect(0, 0, opponentCanvas.width, opponentCanvas.height);
+        opponentCtx.drawImage(img, 0, 0, opponentCanvas.width, opponentCanvas.height);
+      };
+      img.src = frame;
+    };
+
+    socket.on("game:frame", handleFrame);
+
+    return () => {
+      window.clearInterval(captureInterval);
+      socket.off("game:frame", handleFrame);
+    };
+  }, [socket, lobbyId, solo]);
+
   const selectedOpponentHealth = selectedOpponent
     ? Math.round(getHealthPercent(lobbyMatch, selectedOpponent.userId))
     : 0;
@@ -1199,13 +1364,40 @@ export function GraphBattlePanel({
     <section className={styles.cvPanel}>
       <div className={styles.panelHeader}>
         <div>
-          <p className={styles.label}>Graph Battle</p>
-          <h2>Trace the equation to cast damage</h2>
+          <p className={styles.label}>{solo ? "Solo Practice" : "Graph Battle"}</p>
+          <h2>{solo ? "Trace the equation to score points" : "Trace the equation to cast damage"}</h2>
         </div>
-        <span className={styles.state}>{selectedOpponent ? "Target locked" : "No target"}</span>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {cameraBlocked ? (
+            <button
+              type="button"
+              className={styles.linkButton}
+              onClick={async () => {
+                try {
+                  const s = await navigator.mediaDevices.getUserMedia({ video: { width: DRAW_WIDTH, height: DRAW_HEIGHT } });
+                  const v = videoRef.current;
+                  if (v) {
+                    v.srcObject = s;
+                    await v.play();
+                    setCameraBlocked(false);
+                    setLocalError("");
+                    setTrackingStatus("Camera connected. Draw with your index finger, then hold an open palm to grade.");
+                  }
+                } catch {
+                  setLocalError("Camera access was denied. Check your browser permissions and try again.");
+                }
+              }}
+            >
+              Enable Camera
+            </button>
+          ) : null}
+          {!solo && (
+            <span className={styles.state}>{selectedOpponent ? "Target locked" : "No target"}</span>
+          )}
+        </div>
       </div>
 
-      <div className={styles.cvBattleLayout}>
+      <div className={solo ? styles.cvBattleLayoutSolo : styles.cvBattleLayout}>
         <div ref={containerRef} className={styles.cvContainer}>
           <video ref={videoRef} className={styles.cvVideo} autoPlay muted playsInline />
           <canvas
@@ -1228,26 +1420,7 @@ export function GraphBattlePanel({
           />
         </div>
 
-        <div className={styles.cvSideColumn}>
-          <div ref={opponentContainerRef} className={styles.cvOpponent}>
-            {selectedOpponent ? (
-              <div className={styles.cvOpponentCard}>
-                <p className={styles.label}>Enemy Focus</p>
-                <strong>{formatPlayerName(selectedOpponent)}</strong>
-                <span className={styles.meta}>Aim your graph here</span>
-                <div className={styles.healthTrack} aria-hidden="true">
-                  <div className={styles.healthFill} style={{ width: `${selectedOpponentHealth}%` }} />
-                </div>
-              </div>
-            ) : (
-              <div className={styles.cvOpponentCard}>
-                <p className={styles.label}>Enemy Focus</p>
-                <strong>Waiting for target</strong>
-                <span className={styles.meta}>Pick an opponent from the player list.</span>
-              </div>
-            )}
-          </div>
-
+        {solo ? (
           <div
             className={styles.cvEquation}
             dangerouslySetInnerHTML={{
@@ -1256,7 +1429,45 @@ export function GraphBattlePanel({
                 katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
             }}
           />
-        </div>
+        ) : (
+          <div className={styles.cvSideColumn}>
+            <div ref={opponentContainerRef} className={styles.cvOpponent}>
+              <canvas
+                ref={opponentCanvasRef}
+                width={320}
+                height={240}
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  borderRadius: 12,
+                  background: "#0a0a1a",
+                  display: "block",
+                }}
+              />
+              <div className={styles.cvOpponentCard}>
+                {selectedOpponent ? (
+                  <>
+                    <strong>{formatPlayerName(selectedOpponent)}</strong>
+                    <div className={styles.healthTrack} aria-hidden="true">
+                      <div className={styles.healthFill} style={{ width: `${selectedOpponentHealth}%` }} />
+                    </div>
+                  </>
+                ) : (
+                  <span className={styles.meta}>Pick an opponent from the player list.</span>
+                )}
+              </div>
+            </div>
+
+            <div
+              className={styles.cvEquation}
+              dangerouslySetInnerHTML={{
+                __html:
+                  equationMarkup ||
+                  katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <canvas ref={attackCanvasRef} className={styles.cvAttackCanvas} />

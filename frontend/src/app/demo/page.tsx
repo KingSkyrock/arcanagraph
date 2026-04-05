@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 import { CustomizerDemo } from "./customizer-demo";
 import { DemoClient } from "./demo-client";
 import styles from "./page.module.css";
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function DemoPage() {
   return (
     <main className={styles.page}>
+      <Navbar />
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
           <p className={styles.kicker}>FX Sandbox</p>

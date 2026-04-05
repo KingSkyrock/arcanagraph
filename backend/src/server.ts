@@ -435,6 +435,20 @@ function registerLobbySockets(io: SocketIOServer) {
         }
       },
     );
+
+    socket.on("game:frame", (payload: { lobbyId?: string; frame?: string }) => {
+      const lobbyId = typeof payload?.lobbyId === "string" ? payload.lobbyId.trim() : "";
+      const frame = typeof payload?.frame === "string" ? payload.frame : "";
+
+      if (!user || !lobbyId || !frame) {
+        return;
+      }
+
+      socket.to(`lobby:${lobbyId}`).volatile.emit("game:frame", {
+        userId: user.id,
+        frame,
+      });
+    });
   });
 }
 

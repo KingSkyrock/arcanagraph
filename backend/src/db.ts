@@ -561,23 +561,50 @@ export async function ensureDatabaseSchema(force = false) {
 }
 
 export async function upsertUser(input: UpsertUserInput) {
-  const result = await withSchemaRetry(() =>
-    pool.query(
-      `
-        INSERT INTO users (firebase_uid, email, display_name)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (firebase_uid) DO UPDATE
-        SET
-          email = EXCLUDED.email,
-          display_name = COALESCE(EXCLUDED.display_name, users.display_name),
-          updated_at = NOW()
-        RETURNING *
-      `,
-      [input.firebaseUid, input.email, input.displayName],
-    ),
-  );
+  try {
+    const result = await withSchemaRetry(() =>
+      pool.query(
+        `
+          INSERT INTO users (firebase_uid, email, display_name)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (firebase_uid) DO UPDATE
+          SET
+            email = EXCLUDED.email,
+            display_name = COALESCE(EXCLUDED.display_name, users.display_name),
+            updated_at = NOW()
+          RETURNING *
+        `,
+        [input.firebaseUid, input.email, input.displayName],
+      ),
+    );
 
-  return mapUser(result.rows[0]);
+    return mapUser(result.rows[0]);
+  } catch (error: any) {
+    // When the Firebase emulator resets, a returning user gets a new
+    // firebase_uid but keeps the same email.  The INSERT above conflicts on
+    // the email unique constraint instead of firebase_uid.  Handle this by
+    // updating the existing row to adopt the new firebase_uid.
+    if (error?.code === "23505" && error?.constraint === "users_email_key") {
+      const result = await withSchemaRetry(() =>
+        pool.query(
+          `
+            UPDATE users
+            SET
+              firebase_uid = $1,
+              display_name = COALESCE($3, display_name),
+              updated_at = NOW()
+            WHERE email = $2
+            RETURNING *
+          `,
+          [input.firebaseUid, input.email, input.displayName],
+        ),
+      );
+
+      return mapUser(result.rows[0]);
+    }
+
+    throw error;
+  }
 }
 
 export async function getUserByFirebaseUid(firebaseUid: string) {

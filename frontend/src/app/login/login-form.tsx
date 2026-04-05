@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -80,6 +81,7 @@ function getAuthErrorMessage(error: unknown, mode: Mode) {
 
 export function LoginForm() {
   const firebaseClientSummary = getFirebaseClientSummary();
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("sign-in");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -213,7 +215,7 @@ export function LoginForm() {
 
       setUser(payload.user);
       setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
-      await loadLeaderboard();
+      router.push("/");
     } catch (submitError) {
       const message = getAuthErrorMessage(submitError, mode);
 
