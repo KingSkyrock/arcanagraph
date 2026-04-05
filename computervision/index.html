@@ -17,11 +17,17 @@
       padding: 16px;
     }
     h1 { margin-bottom: 16px; color: #c4a0ff; }
+    #battleLayout {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
     #container {
       position: relative;
       width: 860px;
       height: 620px;
       overflow: hidden;
+      border-radius: 8px;
     }
     video {
       position: absolute;
@@ -41,6 +47,33 @@
     #overlay { transform: scaleX(-1); }
     #drawing { transform: scaleX(-1); }
     #grid { pointer-events: none; mix-blend-mode: difference; }
+    #opponentContainer {
+      position: relative;
+      width: 320px;
+      height: 240px;
+      background: #1a1a2e;
+      border: 2px solid #c4a0ff;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    #opponentLabel {
+      color: #666;
+      font-size: 14px;
+      text-align: center;
+    }
+    #attackCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
     #equationDisplay {
       margin-top: 12px;
       padding: 12px 24px;
@@ -61,12 +94,18 @@
 <body>
   <h1>ArcanaGraph - Hand Tracking</h1>
   <div id="equationDisplay"></div>
-  <div id="container">
-    <video id="webcam" autoplay playsinline></video>
-    <canvas id="grid" width="640" height="480"></canvas>
-    <canvas id="drawing" width="640" height="480"></canvas>
-    <canvas id="overlay" width="640" height="480"></canvas>
+  <div id="battleLayout">
+    <div id="container">
+      <video id="webcam" autoplay playsinline></video>
+      <canvas id="grid" width="640" height="480"></canvas>
+      <canvas id="drawing" width="640" height="480"></canvas>
+      <canvas id="overlay" width="640" height="480"></canvas>
+    </div>
+    <div id="opponentContainer">
+      <div id="opponentLabel">Opponent<br>Waiting...</div>
+    </div>
   </div>
+  <canvas id="attackCanvas"></canvas>
   <div id="status">Loading MediaPipe...</div>
   <div style="margin-top: 8px; display: flex; gap: 8px;">
 <button id="clearBtn" style="padding: 8px 16px; background: #444; color: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Clear</button>
@@ -81,6 +120,114 @@
     const canvas = document.getElementById("overlay");
     const ctx = canvas.getContext("2d");
     const drawCanvas = document.getElementById("drawing");
+    const attackCanvas = document.getElementById("attackCanvas");
+    const atkCtx = attackCanvas.getContext("2d");
+
+    // size attack canvas to viewport
+    function resizeAttackCanvas() {
+      attackCanvas.width = window.innerWidth;
+      attackCanvas.height = window.innerHeight;
+    }
+    resizeAttackCanvas();
+    window.addEventListener("resize", resizeAttackCanvas);
+
+    // attack projectile system
+    let attackProjectiles = [];
+
+    function launchAttack(score) {
+      const playerRect = document.getElementById("container").getBoundingClientRect();
+      const opponentRect = document.getElementById("opponentContainer").getBoundingClientRect();
+      const startX = playerRect.left + playerRect.width / 2;
+      const startY = playerRect.top + playerRect.height / 2;
+      const endX = opponentRect.left + opponentRect.width / 2;
+      const endY = opponentRect.top + opponentRect.height / 2;
+
+      // color based on score
+      if (score < 50) return;
+      const fireColors = ["#ff3300", "#ff5500", "#ff7700", "#ff9900", "#ffbb00"];
+
+      // spawn multiple projectile particles
+      for (let i = 0; i < 12; i++) {
+        const delay = i * 30;
+        const spread = (Math.random() - 0.5) * 40;
+        attackProjectiles.push({
+          startX: startX + (Math.random() - 0.5) * 60,
+          startY: startY + (Math.random() - 0.5) * 60,
+          endX: endX + spread,
+          endY: endY + spread,
+          progress: -delay / 500,
+          speed: 0.04 + Math.random() * 0.02,
+          size: 5 + Math.random() * 8,
+          color: fireColors[Math.floor(Math.random() * fireColors.length)],
+          trail: []
+        });
+      }
+    }
+
+    function updateAndDrawAttack() {
+      atkCtx.clearRect(0, 0, attackCanvas.width, attackCanvas.height);
+      if (attackProjectiles.length === 0) return;
+
+      for (let i = attackProjectiles.length - 1; i >= 0; i--) {
+        const p = attackProjectiles[i];
+        p.progress += p.speed;
+
+        if (p.progress < 0) continue; // still delayed
+
+        if (p.progress > 1) {
+          if (!p.isBurst) {
+            // main projectile impact — spawn burst particles (these don't spawn more)
+            for (let j = 0; j < 16; j++) {
+              const angle = Math.random() * Math.PI * 2;
+              const colors = ["#ff3300", "#ff6600", "#ff9900", "#ffcc00"];
+              attackProjectiles.push({
+                startX: p.endX, startY: p.endY,
+                endX: p.endX + Math.cos(angle) * (50 + Math.random() * 80),
+                endY: p.endY + Math.sin(angle) * (50 + Math.random() * 80),
+                progress: 0, speed: 0.02 + Math.random() * 0.02,
+                size: 3 + Math.random() * 7,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                trail: [], isBurst: true
+              });
+            }
+          }
+          attackProjectiles.splice(i, 1);
+          continue;
+        }
+
+        // fade out burst particles near end
+        const alpha = p.isBurst ? 1 - p.progress : 1;
+
+        const t = p.isBurst ? p.progress : p.progress * p.progress * (3 - 2 * p.progress);
+        const x = p.startX + (p.endX - p.startX) * t;
+        const y = p.startY + (p.endY - p.startY) * t;
+
+        // store trail
+        p.trail.push({ x, y });
+        if (p.trail.length > 8) p.trail.shift();
+
+        // draw trail
+        for (let j = 0; j < p.trail.length; j++) {
+          const ta = (j + 1) / p.trail.length * 0.4 * alpha;
+          atkCtx.globalAlpha = ta;
+          atkCtx.fillStyle = p.color;
+          atkCtx.beginPath();
+          atkCtx.arc(p.trail[j].x, p.trail[j].y, p.size * 0.5, 0, Math.PI * 2);
+          atkCtx.fill();
+        }
+
+        // draw head
+        atkCtx.globalAlpha = alpha;
+        atkCtx.fillStyle = p.color;
+        atkCtx.shadowColor = p.color;
+        atkCtx.shadowBlur = 12;
+        atkCtx.beginPath();
+        atkCtx.arc(x, y, p.size * (p.isBurst ? (1 - p.progress) : 1), 0, Math.PI * 2);
+        atkCtx.fill();
+        atkCtx.shadowBlur = 0;
+      }
+      atkCtx.globalAlpha = 1;
+    }
     const drawCtx = drawCanvas.getContext("2d");
     const gridCanvas = document.getElementById("grid");
     const gridCtx = gridCanvas.getContext("2d");
@@ -386,14 +533,16 @@
         const { xFn, yFn, tMin, tMax } = equationConfig;
         const tStep = step || (tMax - tMin) / 400;
         for (let t = tMin; t <= tMax; t += tStep) {
-          pts.push({ mx: xFn(t), my: yFn(t) });
+          const mx = xFn(t), my = yFn(t);
+          if (isFinite(mx) && isFinite(my)) pts.push({ mx, my });
         }
       } else {
         const xMin = -centerX / pxPerUnit;
         const xMax = (W - centerX) / pxPerUnit;
         const s = step || 0.05;
         for (let u = xMin; u <= xMax; u += s) {
-          pts.push({ mx: u, my: equationConfig.fn(u) });
+          const my = equationConfig.fn(u);
+          if (isFinite(my)) pts.push({ mx: u, my });
         }
       }
       return pts;
@@ -468,6 +617,7 @@
       if (drawn.length < MIN_STROKE_POINTS) return { total: 0, shape: 0, position: 0 };
 
       const truth = getGroundTruthPoints();
+      if (truth.length < 2) return { total: 0, shape: 0, position: 0 };
       const drawnCentroid = centroid(drawn);
       const truthCentroid = centroid(truth);
 
@@ -701,22 +851,24 @@
     });
 
     // button handlers
-    document.getElementById("clearBtn").addEventListener("click", () => {
+    function resetSession() {
       trails.Left = [];
       trails.Right = [];
+      resetTrackingState("Left");
+      resetTrackingState("Right");
       shapeDebugData = null;
       gradeAnim = null;
+      openPalmDetected = false;
+      openPalmStart = 0;
+      palmScored = false;
       drawCtx.clearRect(0, 0, 640, 480);
       document.getElementById("scoreDisplay").textContent = "";
-    });
+    }
+
+    document.getElementById("clearBtn").addEventListener("click", resetSession);
 
     document.getElementById("newEqBtn").addEventListener("click", () => {
-      trails.Left = [];
-      trails.Right = [];
-      shapeDebugData = null;
-      gradeAnim = null;
-      drawCtx.clearRect(0, 0, 640, 480);
-      document.getElementById("scoreDisplay").textContent = "";
+      resetSession();
       setEquation(selectRandomEquation());
     });
 
@@ -732,6 +884,7 @@
     let handLandmarker = null;
     let gestureRecognizer = null;
     let lastTimestamp = -1;
+    let lastVideoTime = -1;
     let openPalmDetected = false;
     let openPalmStart = 0;
     let palmScored = false;
@@ -767,6 +920,21 @@
     const direction = { Left: { x: 0, y: 0 }, Right: { x: 0, y: 0 } };
     // if moving fast and detection blinks, bridge the gap instead of breaking
     const FAST_THRESHOLD = 300; // px/sec
+
+    function resetTrackingState(label) {
+      wasDrawing[label] = false;
+      rawDrawing[label] = false;
+      rawChangeTime[label] = 0;
+      stableDrawing[label] = false;
+      trailHistory[label] = [];
+      smoothed[label] = null;
+      lastTrailPt[label] = null;
+      lastTrailTime[label] = 0;
+      lastPos[label] = null;
+      lastPosTime[label] = 0;
+      velocity[label] = 0;
+      direction[label] = { x: 0, y: 0 };
+    }
     // outlier rejection: only reject extreme spikes (opposite direction + big jump)
     const OUTLIER_ANGLE_COS = -0.7;
     const OUTLIER_MIN_JUMP = 60;
@@ -864,10 +1032,16 @@
       if (!handLandmarker) return;
       const GRADE_TIME = 850;
       const now = performance.now();
-      if (now === lastTimestamp) {
+
+      // always update attack projectiles (even on skipped frames)
+      updateAndDrawAttack();
+
+      // skip if video hasn't advanced to a new frame
+      if (video.currentTime === lastVideoTime) {
         requestAnimationFrame(detect);
         return;
       }
+      lastVideoTime = video.currentTime;
       lastTimestamp = now;
 
       const results = handLandmarker.detectForVideo(video, now);
@@ -904,7 +1078,13 @@
         if (s.drawnScaled) {
           shapeDebugData = { drawnScaled: s.drawnScaled, truthCentered: s.truthCentered };
         }
-        gradeAnim = { score: s.total, startTime: now, duration: 2000 };
+        // longer animation for fails to show the red X
+        const animDuration = s.total < 50 ? 3500 : 2000;
+        gradeAnim = { score: s.total, startTime: now, duration: animDuration };
+        // launch attack projectile after a short delay for the count-up to finish
+        if (s.total >= 50) {
+          setTimeout(() => launchAttack(s.total), 900);
+        }
       }
       // reset when palm goes away
       if (!openPalmDetected) {
@@ -952,22 +1132,23 @@
           }
           smoothed[label] = { x, y };
 
-          // reject points outside drawing canvas bounds
-          const inBounds = x >= 0 && x <= 640 && y >= 0 && y <= 480;
+          // reject points outside drawing canvas bounds (with margin to prevent EMA edge flickering)
+          const inBounds = x >= -20 && x <= 660 && y >= -20 && y <= 500;
+          const inDrawArea = x >= 0 && x <= 640 && y >= 0 && y <= 480;
           if (!inBounds) {
-            // reset all state so re-entry starts completely fresh
-            smoothed[label] = null;
-            lastPos[label] = null;
-            lastPosTime[label] = 0;
-            velocity[label] = 0;
-            direction[label] = { x: 0, y: 0 };
-            lastTrailPt[label] = null;
-            if (wasDrawing[label]) {
-              trails[label].push(null);
-              wasDrawing[label] = false;
+            if (wasDrawing[label]) trails[label].push(null);
+            resetTrackingState(label);
+            // clear lingering particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+              particles[i].life = Math.min(particles[i].life, 0.1);
             }
-            rawDrawing[label] = false;
-            stableDrawing[label] = false;
+            drawHand(landmarks, isRight, false);
+            continue;
+          }
+          // in margin but not draw area — track position but don't draw
+          if (!inDrawArea) {
+            lastPos[label] = { x, y };
+            lastPosTime[label] = now;
             drawHand(landmarks, isRight, false);
             continue;
           }
@@ -1093,11 +1274,11 @@
         }
       }
 
-      // if a hand disappears, end its stroke
+      // if a hand disappears, fully reset its state
       for (const label of ["Left", "Right"]) {
         if (!handsPresent[label] && wasDrawing[label]) {
           trails[label].push(null);
-          wasDrawing[label] = false;
+          resetTrackingState(label);
         }
       }
 
@@ -1119,13 +1300,19 @@
         if (elapsed > gradeAnim.duration) {
           gradeAnim = null;
         } else {
-          const t = elapsed / gradeAnim.duration;
-          // count up effect for first 40%, then hold, then fade out
-          const countUpT = Math.min(1, t / 0.4);
+          const isFail = gradeAnim.score < 50;
+          // count-up phase is first 800ms regardless of total duration
+          const countUpEnd = 800;
+          const countUpT = Math.min(1, elapsed / countUpEnd);
           const displayNum = Math.round(countUpT * gradeAnim.score);
-          const fadeOut = t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
+
+          // fade out near end
+          const fadeStart = gradeAnim.duration * 0.75;
+          const fadeOut = elapsed > fadeStart ? 1 - (elapsed - fadeStart) / (gradeAnim.duration - fadeStart) : 1;
+
           // scale: pop in then settle
-          const scale = t < 0.1 ? 0.5 + (t / 0.1) * 0.7 : 1.2 - (Math.min(t, 0.3) - 0.1) * 1;
+          const scaleT = elapsed / gradeAnim.duration;
+          const scale = scaleT < 0.05 ? 0.5 + (scaleT / 0.05) * 0.7 : 1.2 - (Math.min(scaleT, 0.15) - 0.05) * 1;
 
           // color based on current displayed value
           let color;
@@ -1143,6 +1330,23 @@
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(`${displayNum}%`, -320, 200);
+
+          // red X for fails — appears after count-up, blinks
+          if (isFail && elapsed > countUpEnd) {
+            const xElapsed = elapsed - countUpEnd;
+            // blink: on/off every 300ms
+            const blink = Math.floor(xElapsed / 300) % 2 === 0;
+            if (blink) {
+              // pop-in scale for the X
+              const xScale = xElapsed < 150 ? 0.3 + (xElapsed / 150) * 0.7 : 1;
+              ctx.font = `bold ${Math.round(160 * xScale)}px system-ui`;
+              ctx.fillStyle = "#ff0000";
+              ctx.shadowColor = "#ff0000";
+              ctx.shadowBlur = 30;
+              ctx.fillText("✗", -320, 200);
+            }
+          }
+
           ctx.shadowBlur = 0;
           ctx.globalAlpha = 1;
           ctx.restore();
