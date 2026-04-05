@@ -74,6 +74,7 @@ export const graphConfig = {
 const LEADING_COEFF: Record<string, string> = {
   quadratic: "a",
   cubic: "a",
+  quartic: "a",
   exponential: "a",
   absolute_value: "a",
   square_root: "a",

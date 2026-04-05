@@ -29,7 +29,7 @@ import {
   getSessionUserFromSessionCookie,
   setSessionCookie,
 } from "./auth";
-import { startPowerupLoop, stopPowerupLoop, collectPowerup, getAndClearMultiplier } from "./powerup-state";
+import { startPowerupLoop, stopPowerupLoop, collectPowerup, getAndClearMultiplier, resetCollectCount } from "./powerup-state";
 import {
   attackAllLobbyPlayers,
   type AppUser,
@@ -503,6 +503,7 @@ function registerLobbySockets(io: SocketIOServer) {
           advancePlayer(lobbyId, user.id);
 
           const result = scoreDrawing(trails, equationConfig);
+          resetCollectCount(lobbyId, user.id);
           const multiplier = getAndClearMultiplier(lobbyId, user.id);
           const adjustedScore = Math.min(100, result.total * multiplier);
           const lobby = await attackAllLobbyPlayers(

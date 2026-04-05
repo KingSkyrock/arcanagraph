@@ -355,16 +355,6 @@ export default function PlayPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', alignItems: 'center', marginBottom: 32 }}>
 
               <button
-                style={getLegoStyle('rgb(34, 197, 94)', 'rgb(21, 128, 61)', true)}
-                onMouseEnter={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
-                onMouseLeave={e => handleMouseLeave(e, 'rgb(34, 197, 94)', 'rgb(21, 128, 61)', true)}
-                onMouseDown={e => handleMouseDown(e, 'rgb(21, 128, 61)')}
-                onMouseUp={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
-                onClick={() => { if (mode === 'battle') { setDifficulty('shapes'); setStep('lobby'); } else goToSolo(); }}
-                disabled
-              >Shapes (coming soon)</button>
-
-              <button
                 style={getLegoStyle('rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}
                 onMouseEnter={e => handleMouseEnter(e, 'rgb(180, 83, 9)', true, 'rgb(217, 119, 6)')}
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}

@@ -18,9 +18,12 @@ import { sampleCurvePoints, type EquationConfig } from "../../shared/graph-scori
 import { getAssignedConfig } from "./equation-state";
 import { healLobbyPlayer, directDamageAllLobbyPlayers } from "./db";
 
+const MAX_COLLECTS_PER_ROUND = 2;
+
 type LobbyPowerupState = {
   powerups: Powerup[];
   multipliers: Map<string, number>;
+  collectCounts: Map<string, number>; // userId → powerups collected since last graph submission
   interval: ReturnType<typeof setInterval> | null;
   playerIds: string[];
 };
@@ -111,8 +114,13 @@ function tickPowerups(lobbyId: string, io: Server) {
   }
   state.powerups = state.powerups.filter((p) => now < p.despawnAt && !p.collectedBy);
 
+  // don't spawn if every player has hit the collect cap
+  const anyCanCollect = state.playerIds.some(
+    (id) => (state.collectCounts.get(id) ?? 0) < MAX_COLLECTS_PER_ROUND,
+  );
+
   // spawn logic
-  if (state.powerups.length < MAX_ACTIVE && Math.random() < SPAWN_CHANCE) {
+  if (anyCanCollect && state.powerups.length < MAX_ACTIVE && Math.random() < SPAWN_CHANCE) {
     if (state.powerups.length === 0) {
       spawnPowerup(lobbyId, state, io);
     } else {
@@ -131,6 +139,7 @@ export function startPowerupLoop(lobbyId: string, playerIds: string[], io: Serve
   const state: LobbyPowerupState = {
     powerups: [],
     multipliers: new Map(),
+    collectCounts: new Map(),
     interval: null,
     playerIds,
   };
@@ -156,10 +165,15 @@ export async function collectPowerup(
   const state = lobbyStates.get(lobbyId);
   if (!state) return null;
 
+  // enforce max collects per round
+  const collected = state.collectCounts.get(userId) ?? 0;
+  if (collected >= MAX_COLLECTS_PER_ROUND) return null;
+
   const powerup = state.powerups.find((p) => p.id === powerupId);
   if (!powerup || powerup.collectedBy || Date.now() >= powerup.despawnAt) return null;
 
   powerup.collectedBy = userId;
+  state.collectCounts.set(userId, collected + 1);
   // remove from active list
   state.powerups = state.powerups.filter((p) => p.id !== powerupId);
 
@@ -213,4 +227,10 @@ export function getAndClearMultiplier(lobbyId: string, userId: string): number {
   const mult = state.multipliers.get(userId) ?? 1.0;
   state.multipliers.delete(userId);
   return mult;
+}
+
+// reset collect counter after a player submits a graph
+export function resetCollectCount(lobbyId: string, userId: string) {
+  const state = lobbyStates.get(lobbyId);
+  if (state) state.collectCounts.set(userId, 0);
 }

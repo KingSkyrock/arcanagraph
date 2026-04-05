@@ -148,6 +148,7 @@ export function GraphBattlePanel({
   const categoryRef = useRef<"beginner" | "advanced" | null>(category);
   const resetSessionRef = useRef<() => void>(() => undefined);
   const reinitCameraRef = useRef<() => void>(() => undefined);
+  const sessionReadyRef = useRef(sessionReady);
   const nextEquationRef = useRef<() => void>(() => undefined);
   const animationFrameRef = useRef<number | null>(null);
   const timeoutIdsRef = useRef<number[]>([]);
@@ -172,6 +173,7 @@ export function GraphBattlePanel({
     error: primaryHandError,
     savePrimaryHand,
   } = usePrimaryHandPreference(sessionUser, sessionReady);
+  const primaryHandReadyRef = useRef(primaryHandReady);
 
   const selectedOpponent = useMemo(
     () =>
@@ -211,6 +213,16 @@ export function GraphBattlePanel({
   useEffect(() => {
     categoryRef.current = category;
   }, [category]);
+
+  useEffect(() => {
+    const wasReady = sessionReadyRef.current && primaryHandReadyRef.current;
+    sessionReadyRef.current = sessionReady;
+    primaryHandReadyRef.current = primaryHandReady;
+    // If we just became ready and the camera hasn't started yet, kick it
+    if (!wasReady && sessionReady && primaryHandReady && primaryHand) {
+      reinitCameraRef.current();
+    }
+  }, [sessionReady, primaryHandReady, primaryHand]);
 
   useEffect(() => {
     if (!solo || !familiesRef.current.length) {
@@ -330,7 +342,7 @@ export function GraphBattlePanel({
       return;
     }
 
-    if (!sessionReady || !primaryHandReady) {
+    if (!sessionReadyRef.current || !primaryHandReadyRef.current) {
       return;
     }
 
@@ -1833,7 +1845,10 @@ export function GraphBattlePanel({
 
       runtimeVideo.srcObject = null;
     };
-  }, [primaryHand, primaryHandReady, sessionReady]);
+    // Only restart the camera pipeline when the tracked hand changes.
+    // sessionReady and primaryHandReady changes should NOT tear down the camera.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primaryHand]);
 
   // Frame streaming: capture composite frames and send to opponent via socket
   useEffect(() => {

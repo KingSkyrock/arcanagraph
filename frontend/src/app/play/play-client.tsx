@@ -32,7 +32,6 @@ async function readJson<T>(response: Response) {
 }
 
 const DIFFICULTY_LABELS: Record<string, string> = {
-  shapes: "Shapes",
   beginner: "Beginner Functions",
   advanced: "Advanced Functions",
   custom: "Custom",
