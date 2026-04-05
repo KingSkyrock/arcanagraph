@@ -14,6 +14,8 @@ import styles from "./page.module.css";
 import {
   drawGrid,
   drawGroundTruth,
+  filterEquationFamilies,
+  formatSkillFamilyLabel,
   parseEquationCsv,
   scoreDrawing,
   selectRandomEquation,
@@ -31,6 +33,7 @@ type GraphBattlePanelProps = {
   selectedTargetId: string | null;
   disabled: boolean;
   solo?: boolean;
+  soloSkillFamily?: string | null;
   onSuccessfulScore: (targetUserId: string, score: number) => Promise<void>;
   socket?: Socket | null;
   lobbyId?: string;
@@ -82,6 +85,10 @@ function formatPlayerName(player: Pick<LobbyPlayer, "displayName" | "email" | "f
   return player.displayName || player.email || player.firebaseUid;
 }
 
+function isSoloGuestPlayer(player: Pick<LobbyPlayer, "userId" | "firebaseUid">) {
+  return player.userId === "solo-guest" || player.firebaseUid === "solo-guest";
+}
+
 function getHealthPercent(match: LobbyMatch | null, userId: string) {
   if (!match) {
     return 0;
@@ -103,6 +110,7 @@ export function GraphBattlePanel({
   selectedTargetId,
   disabled,
   solo = false,
+  soloSkillFamily = null,
   onSuccessfulScore,
   socket,
   lobbyId,
@@ -120,6 +128,7 @@ export function GraphBattlePanel({
   const disabledRef = useRef(disabled);
   const onSuccessfulScoreRef = useRef(onSuccessfulScore);
   const soloRef = useRef(solo);
+  const soloSkillFamilyRef = useRef<string | null>(soloSkillFamily);
   const resetSessionRef = useRef<() => void>(() => undefined);
   const nextEquationRef = useRef<() => void>(() => undefined);
   const animationFrameRef = useRef<number | null>(null);
@@ -163,6 +172,19 @@ export function GraphBattlePanel({
   useEffect(() => {
     soloRef.current = solo;
   }, [solo]);
+
+  useEffect(() => {
+    soloSkillFamilyRef.current = soloSkillFamily;
+  }, [soloSkillFamily]);
+
+  useEffect(() => {
+    if (!solo || !familiesRef.current.length) {
+      return;
+    }
+
+    resetSessionRef.current();
+    nextEquationRef.current();
+  }, [solo, soloSkillFamily]);
 
   useEffect(() => {
     const video = videoRef.current!;
@@ -299,7 +321,23 @@ export function GraphBattlePanel({
         return;
       }
 
-      renderEquation(selectRandomEquation(families));
+      const filteredFamilies = soloRef.current
+        ? filterEquationFamilies(families, {
+            skillFamily: soloSkillFamilyRef.current,
+          })
+        : families;
+
+      if (!filteredFamilies.length) {
+        setLocalError(
+          soloSkillFamilyRef.current
+            ? `No graph equations are available for ${formatSkillFamilyLabel(soloSkillFamilyRef.current)} yet.`
+            : "No graph equations are available right now.",
+        );
+        return;
+      }
+
+      setLocalError("");
+      renderEquation(selectRandomEquation(filteredFamilies));
       setScoreDisplay("");
     }
 
@@ -1368,6 +1406,11 @@ export function GraphBattlePanel({
           <h2>{solo ? "Trace the equation to score points" : "Trace the equation to cast damage"}</h2>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {solo && soloSkillFamily ? (
+            <span className={styles.state}>
+              {formatSkillFamilyLabel(soloSkillFamily)}
+            </span>
+          ) : null}
           {cameraBlocked ? (
             <button
               type="button"
@@ -1499,7 +1542,9 @@ export function GraphBattlePanel({
       </div>
 
       <p className={styles.muted}>
-        {trackingStatus} Signed in as {formatPlayerName(currentPlayer)}.
+        {solo && isSoloGuestPlayer(currentPlayer)
+          ? `${trackingStatus} Practicing as ${formatPlayerName(currentPlayer)}.`
+          : `${trackingStatus} Signed in as ${formatPlayerName(currentPlayer)}.`}
       </p>
       {localError ? <p className={styles.error}>{localError}</p> : null}
     </section>

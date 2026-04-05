@@ -74,6 +74,11 @@ type ParamRange = {
   step: number;
 };
 
+type EquationFilters = {
+  difficulty?: string;
+  skillFamily?: string | null;
+};
+
 function parseParamRanges(rangeStr: string) {
   const params: Record<string, ParamRange[]> = {};
 
@@ -237,8 +242,40 @@ export function parseEquationCsv(text: string): EquationFamily[] {
   return families;
 }
 
-export function selectRandomEquation(families: EquationFamily[], difficulty?: string) {
-  const pool = difficulty ? families.filter((family) => family.difficulty === difficulty) : families;
+export function formatSkillFamilyLabel(skillFamily: string) {
+  return skillFamily
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+export function listSkillFamilies(families: EquationFamily[]) {
+  return [...new Set(families.map((family) => family.skill_family.trim()).filter(Boolean))].sort(
+    (left, right) =>
+      formatSkillFamilyLabel(left).localeCompare(formatSkillFamilyLabel(right)),
+  );
+}
+
+export function filterEquationFamilies(
+  families: EquationFamily[],
+  options: EquationFilters = {},
+) {
+  return families.filter((family) => {
+    if (options.difficulty && family.difficulty !== options.difficulty) {
+      return false;
+    }
+
+    if (options.skillFamily && family.skill_family !== options.skillFamily) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export function selectRandomEquation(families: EquationFamily[], options: EquationFilters = {}) {
+  const pool = filterEquationFamilies(families, options);
 
   if (!pool.length) {
     return {
