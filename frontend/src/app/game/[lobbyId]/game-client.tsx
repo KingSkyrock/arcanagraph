@@ -100,7 +100,7 @@ function getStatusMessage(lobby: Lobby | null, currentUserId: string | null) {
     return "You have been eliminated. Watch the remaining duel play out.";
   }
 
-  return "Choose an opponent, trace the equation, and hold an open palm to cast damage.";
+  return "Trace the equation, then hold an open palm to cast damage.";
 }
 
 function getLastActionMessage(lobby: Lobby | null) {

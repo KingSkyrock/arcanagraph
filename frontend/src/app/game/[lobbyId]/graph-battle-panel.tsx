@@ -127,6 +127,7 @@ export function GraphBattlePanel({
   const familiesRef = useRef<EquationFamily[]>([]);
   const equationConfigRef = useRef<EquationConfig | null>(null);
   const [trackingStatus, setTrackingStatus] = useState("Loading graph battle...");
+  const [cameraBlocked, setCameraBlocked] = useState(false);
   const [scoreDisplay, setScoreDisplay] = useState("");
   const [equationMarkup, setEquationMarkup] = useState("");
   const [localError, setLocalError] = useState("");
@@ -753,13 +754,27 @@ export function GraphBattlePanel({
       const now = performance.now();
       updateAndDrawAttack();
 
-      if (runtimeVideo.currentTime === lastVideoTime) {
+      if (
+        runtimeVideo.currentTime === lastVideoTime ||
+        runtimeVideo.videoWidth === 0 ||
+        runtimeVideo.videoHeight === 0
+      ) {
         animationFrameRef.current = window.requestAnimationFrame(detect);
         return;
       }
 
       lastVideoTime = runtimeVideo.currentTime;
-      const results = handLandmarker.detectForVideo(runtimeVideo, now);
+
+      let results;
+      try {
+        results = handLandmarker.detectForVideo(runtimeVideo, now);
+      } catch {
+        // Video element may be in a transient bad state (e.g. after strict-mode
+        // remount).  Skip this frame rather than killing the detection loop.
+        animationFrameRef.current = window.requestAnimationFrame(detect);
+        return;
+      }
+
       gestureFrameCount += 1;
 
       if (gestureRecognizer && gestureFrameCount % 3 === 0) {
@@ -1142,6 +1157,8 @@ export function GraphBattlePanel({
           credentials: "include",
         });
 
+        if (cancelled) return;
+
         if (!equationResponse.ok) {
           throw new Error(
             `Could not load graph equations (${equationResponse.status}). The battle prompts are unavailable right now.`,
@@ -1160,12 +1177,18 @@ export function GraphBattlePanel({
         familiesRef.current = families;
         drawGrid(gridContext);
         chooseNextEquation();
+
+        if (cancelled) return;
+
         setTrackingStatus("Loading MediaPipe hand tracking...");
 
         const visionModule = await import("@mediapipe/tasks-vision");
+        if (cancelled) return;
+
         const vision = await visionModule.FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
         );
+        if (cancelled) return;
 
         handLandmarker = await visionModule.HandLandmarker.createFromOptions(vision, {
           baseOptions: {
@@ -1175,6 +1198,7 @@ export function GraphBattlePanel({
           runningMode: "VIDEO",
           numHands: 2,
         });
+        if (cancelled) { handLandmarker.close(); handLandmarker = null; return; }
 
         gestureRecognizer = await visionModule.GestureRecognizer.createFromOptions(vision, {
           baseOptions: {
@@ -1184,6 +1208,7 @@ export function GraphBattlePanel({
           runningMode: "VIDEO",
           numHands: 1,
         });
+        if (cancelled) { gestureRecognizer.close(); gestureRecognizer = null; return; }
 
         setTrackingStatus("MediaPipe loaded. Starting camera...");
         await startCamera();
@@ -1193,10 +1218,16 @@ export function GraphBattlePanel({
         }
       } catch (error) {
         if (!cancelled) {
+          const msg = error instanceof Error ? error.message : "";
+          const isDenied =
+            msg.includes("Permission denied") ||
+            msg.includes("NotAllowedError") ||
+            msg.includes("not available");
+          setCameraBlocked(isDenied || !navigator.mediaDevices?.getUserMedia);
           setLocalError(
-            error instanceof Error
-              ? error.message
-              : "The graph battle camera could not be initialized.",
+            isDenied
+              ? "Camera access was denied. Click the button above to try again."
+              : msg || "The graph battle camera could not be initialized.",
           );
           setTrackingStatus("Graph battle is offline.");
         }
@@ -1336,9 +1367,34 @@ export function GraphBattlePanel({
           <p className={styles.label}>{solo ? "Solo Practice" : "Graph Battle"}</p>
           <h2>{solo ? "Trace the equation to score points" : "Trace the equation to cast damage"}</h2>
         </div>
-        {!solo && (
-          <span className={styles.state}>{selectedOpponent ? "Target locked" : "No target"}</span>
-        )}
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {cameraBlocked ? (
+            <button
+              type="button"
+              className={styles.linkButton}
+              onClick={async () => {
+                try {
+                  const s = await navigator.mediaDevices.getUserMedia({ video: { width: DRAW_WIDTH, height: DRAW_HEIGHT } });
+                  const v = videoRef.current;
+                  if (v) {
+                    v.srcObject = s;
+                    await v.play();
+                    setCameraBlocked(false);
+                    setLocalError("");
+                    setTrackingStatus("Camera connected. Draw with your index finger, then hold an open palm to grade.");
+                  }
+                } catch {
+                  setLocalError("Camera access was denied. Check your browser permissions and try again.");
+                }
+              }}
+            >
+              Enable Camera
+            </button>
+          ) : null}
+          {!solo && (
+            <span className={styles.state}>{selectedOpponent ? "Target locked" : "No target"}</span>
+          )}
+        </div>
       </div>
 
       <div className={solo ? styles.cvBattleLayoutSolo : styles.cvBattleLayout}>
