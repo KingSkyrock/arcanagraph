@@ -188,13 +188,18 @@ export function LoginForm() {
       return;
     }
 
-    setLoading(true);
-    setError("");
-
+    // Call signInWithPopup IMMEDIATELY — before any state updates.
+    // Browsers block popups if the user-gesture context is broken by
+    // React re-renders from setState calls.
     try {
       const auth = getFirebaseAuth();
       const provider = new GoogleAuthProvider();
       const credential = await signInWithPopup(auth, provider);
+
+      // Popup succeeded — now safe to update state
+      setLoading(true);
+      setError("");
+
       const idToken = await credential.user.getIdToken(true);
       const response = await fetch(apiUrl("/api/auth/session"), {
         method: "POST",
@@ -214,17 +219,25 @@ export function LoginForm() {
       setUser(payload.user);
       emitSessionUserUpdated(payload.user);
       setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
-      await loadLeaderboard();
       router.push("/");
     } catch (submitError) {
-      const message = getAuthErrorMessage(submitError, "sign-in");
+      const code =
+        typeof submitError === "object" && submitError !== null && "code" in submitError
+          ? (submitError as { code: string }).code
+          : "";
 
-      if (
-        !(typeof submitError === "object" && submitError !== null && "code" in submitError)
-      ) {
-        console.error(submitError);
+      // User closed the popup — not an error worth showing
+      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+        return;
       }
 
+      if (code === "auth/popup-blocked") {
+        setError("Your browser blocked the sign-in popup. Allow popups for this site and try again.");
+        return;
+      }
+
+      const message = getAuthErrorMessage(submitError, "sign-in");
+      if (!code) console.error(submitError);
       setError(message);
     } finally {
       setLoading(false);

@@ -9,6 +9,8 @@ export {
   type EquationConfig,
   type ScoreResult,
   type SerializableEquation,
+  BEGINNER_FAMILIES,
+  filterByCategory,
   graphConfig,
   parseEquationCsv,
   selectRandomEquation,
@@ -26,15 +28,9 @@ import {
   sampleCurvePoints,
 } from "@/shared/graph-scoring";
 
-// --- Frontend-only helpers (added by teammates, not in shared module) ---
+// --- Frontend-only helpers ---
 
-type EquationFilters = {
-  difficulty?: string;
-  skillFamily?: string | null;
-  category?: "beginner" | "advanced" | null;
-};
-
-const BEGINNER_SKILL_FAMILIES = ["linear", "quadratic", "absolute_value"];
+import { filterByCategory as sharedFilterByCategory } from "@/shared/graph-scoring";
 
 export function formatSkillFamilyLabel(skillFamily: string) {
   return skillFamily
@@ -51,26 +47,25 @@ export function listSkillFamilies(families: EquationFamily[]) {
   );
 }
 
+type EquationFilters = {
+  difficulty?: string;
+  skillFamily?: string | null;
+  category?: "beginner" | "advanced" | null;
+};
+
+// Delegates to the shared filterByCategory for category/skillFamily,
+// then applies any additional difficulty filter.
 export function filterEquationFamilies(
   families: EquationFamily[],
   options: EquationFilters = {},
 ) {
-  return families.filter((family) => {
-    if (options.category === "beginner") {
-      if (family.difficulty !== "easy") return false;
-      if (!BEGINNER_SKILL_FAMILIES.includes(family.skill_family)) return false;
-    }
+  let pool = sharedFilterByCategory(families, options.category ?? options.skillFamily ?? undefined);
 
-    if (options.difficulty && family.difficulty !== options.difficulty) {
-      return false;
-    }
+  if (options.difficulty) {
+    pool = pool.filter((f) => f.difficulty === options.difficulty);
+  }
 
-    if (options.skillFamily && family.skill_family !== options.skillFamily) {
-      return false;
-    }
-
-    return true;
-  });
+  return pool;
 }
 
 // --- DOM-dependent rendering ---

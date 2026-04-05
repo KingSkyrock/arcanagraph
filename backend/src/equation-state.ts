@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
+  filterByCategory,
   generateEquationWithDescriptor,
   parseEquationCsv,
   type EquationConfig,
@@ -9,19 +10,6 @@ import {
 } from "../../shared/graph-scoring";
 
 let families: EquationFamily[] = [];
-
-const BEGINNER_FAMILIES = ["linear", "quadratic", "absolute_value"];
-
-function filterByCategory(allFamilies: EquationFamily[], category?: string): EquationFamily[] {
-  if (!category) return allFamilies;
-  if (category === "beginner") {
-    return allFamilies.filter(f => f.difficulty === "easy" && BEGINNER_FAMILIES.includes(f.skill_family));
-  }
-  if (category === "advanced") {
-    return allFamilies;
-  }
-  return allFamilies.filter(f => f.skill_family === category);
-}
 
 function shuffle<T>(arr: T[]): T[] {
   const out = [...arr];

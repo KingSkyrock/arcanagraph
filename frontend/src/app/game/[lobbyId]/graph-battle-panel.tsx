@@ -1709,8 +1709,13 @@ export function GraphBattlePanel({
       socket.volatile.emit("game:frame", { lobbyId, frame });
     }, 250);
 
-    // Receive opponent frames and draw to opponent canvas
-    const handleFrame = ({ frame }: { userId: string; frame: string }) => {
+    // Receive opponent frames — only render frames from the currently selected opponent
+    const handleFrame = ({ userId, frame }: { userId: string; frame: string }) => {
+      const targetId = selectedTargetIdRef.current;
+      if (targetId && userId !== targetId) {
+        return;
+      }
+
       const img = new Image();
       img.onload = () => {
         opponentCtx.clearRect(0, 0, opponentCanvas.width, opponentCanvas.height);
@@ -1774,52 +1779,41 @@ export function GraphBattlePanel({
       </div>
 
       {!sessionReady || !primaryHandReady || !primaryHand ? (
-        <div className={styles.panel}>
-          <p className={styles.label}>Primary hand required</p>
-          <h2>Which hand should Arcanagraph track?</h2>
-          <p className={styles.muted}>
-            {sessionReady
-              ? sessionUser
-                ? "We will save this to your player profile and ignore input from the other hand until you change it."
-                : "We will save this in this browser and ignore input from the other hand until you change it."
-              : "Loading where your hand preference should be stored..."}
-          </p>
-          <div className={styles.links}>
-            {(["Left", "Right"] as const).map((option) => {
-              const isSelected = primaryHand === option;
-
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  className={isSelected ? styles.attackButton : styles.linkButton}
-                  onClick={() => void savePrimaryHand(option)}
-                  disabled={!sessionReady || savingPrimaryHand}
-                >
-                  {savingPrimaryHand && isSelected
-                    ? "Saving..."
-                    : isSelected
-                      ? `${formatPrimaryHandLabel(option)} selected`
-                      : `Use ${formatPrimaryHandLabel(option)}`}
-                </button>
-              );
-            })}
-            <Link className={styles.linkButton} href="/settings">
-              Open settings
-            </Link>
-          </div>
-          {sessionReady ? (
+        <div className={styles.modalBackdrop}>
+          <div className={styles.modalCard} style={{ maxWidth: 480, height: "auto", alignContent: "center" }}>
+            <p className={styles.label}>Primary hand required</p>
+            <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", lineHeight: 0.95, letterSpacing: "-0.04em" }}>Which hand should we track?</h2>
             <p className={styles.muted}>
-              {primaryHandSource === "profile"
-                ? "Your player profile already has a saved hand preference."
-                : primaryHandSource === "local"
-                  ? "A local hand choice was found and will be reused here."
-                  : "No hand preference is saved yet."}
+              {sessionReady
+                ? "Pick your drawing hand. We will ignore input from the other one."
+                : "Loading..."}
             </p>
-          ) : null}
-          {primaryHandError ? <p className={styles.error}>{primaryHandError}</p> : null}
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {(["Left", "Right"] as const).map((option) => {
+                const isSelected = primaryHand === option;
+
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    className={isSelected ? styles.attackButton : styles.linkButton}
+                    onClick={() => void savePrimaryHand(option)}
+                    disabled={!sessionReady || savingPrimaryHand}
+                  >
+                    {savingPrimaryHand && isSelected
+                      ? "Saving..."
+                      : isSelected
+                        ? `${formatPrimaryHandLabel(option)} selected`
+                        : `Use ${formatPrimaryHandLabel(option)}`}
+                  </button>
+                );
+              })}
+            </div>
+            {primaryHandError ? <p className={styles.error}>{primaryHandError}</p> : null}
+          </div>
         </div>
-      ) : (
+      ) : null}
+      {(sessionReady && primaryHandReady && primaryHand) ? (
         <>
           <div className={solo ? styles.cvBattleLayoutSolo : styles.cvBattleLayout}>
             <div ref={containerRef} className={styles.cvContainer}>
@@ -1967,7 +1961,7 @@ export function GraphBattlePanel({
             </p>
           ) : null}
         </>
-      )}
+      ) : null}
 
       {showHowToPlay ? (
         <div

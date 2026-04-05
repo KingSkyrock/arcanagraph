@@ -339,9 +339,9 @@ export function parseEquationCsv(text: string): EquationFamily[] {
   return families;
 }
 
-const BEGINNER_FAMILIES = ["linear", "quadratic", "absolute_value"];
+export const BEGINNER_FAMILIES = ["linear", "quadratic", "absolute_value"];
 
-function filterByCategory(families: EquationFamily[], category?: string): EquationFamily[] {
+export function filterByCategory(families: EquationFamily[], category?: string): EquationFamily[] {
   if (!category) return families;
   if (category === "beginner") {
     return families.filter(f => f.difficulty === "easy" && BEGINNER_FAMILIES.includes(f.skill_family));

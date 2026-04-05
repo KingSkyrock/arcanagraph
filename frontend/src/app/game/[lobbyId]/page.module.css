@@ -393,6 +393,10 @@
   justify-content: center;
 }
 
+.cvEquation :global(.katex) {
+  font-size: 1.8em;
+}
+
 .cvEquation :global(.katex-display) {
   margin: 0;
 }

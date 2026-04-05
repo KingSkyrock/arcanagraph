@@ -411,6 +411,20 @@ export function GameClient({ lobbyId }: GameClientProps) {
     }
   }
 
+  // Auto-scroll to camera when match starts
+  const hasScrolledRef = useRef(false);
+  useEffect(() => {
+    if (lobby?.match?.status === "active" && !hasScrolledRef.current) {
+      hasScrolledRef.current = true;
+      setTimeout(() => {
+        document.querySelector('[class*="cvPanel"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 500);
+    }
+    if (!lobby?.match) {
+      hasScrolledRef.current = false;
+    }
+  }, [lobby?.match?.status]);
+
   const currentPlayer = user
     ? lobby?.players.find((player) => player.userId === user.id) ?? null
     : null;
@@ -451,21 +465,11 @@ export function GameClient({ lobbyId }: GameClientProps) {
     <main className={styles.page} style={{ paddingTop: 112 }}>
       <Navbar />
       <section className={styles.shell}>
-        <div className={styles.hero}>
-          <p className={styles.kicker}>Game Room</p>
-          <h1>Match {lobby?.inviteCode || "loading"}</h1>
-          <p className={styles.copy}>
-            Trace the equation with your hand and hold an open palm to cast your spell. Every hit is live!
-          </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800 }}>Match {lobby?.inviteCode || "..."}</h2>
           <div className={styles.links}>
             <Link className={styles.linkButton} href={`/play?lobby=${lobbyId}`}>
-              Back to lobby
-            </Link>
-            <Link className={styles.linkButton} href="/settings">
-              Hand settings
-            </Link>
-            <Link className={styles.linkButton} href="/">
-              Home
+              Leave
             </Link>
           </div>
         </div>
@@ -514,16 +518,6 @@ export function GameClient({ lobbyId }: GameClientProps) {
           {lastActionMessage ? <p className={styles.muted}>{lastActionMessage}</p> : null}
           {error ? <p className={styles.error}>{error}</p> : null}
 
-          {lobby?.match?.status === "active" ? (
-            <button
-              type="button"
-              className={styles.linkButton}
-              style={{ justifySelf: "center" }}
-              onClick={() => document.querySelector('[class*="cvPanel"]')?.scrollIntoView({ behavior: "smooth" })}
-            >
-              Scroll to camera ↓
-            </button>
-          ) : null}
         </div>
 
         {currentPlayer ? (
