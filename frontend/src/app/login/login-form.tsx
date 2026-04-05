@@ -73,7 +73,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [status, setStatus] = useState("Checking backend session...");
+  const [status, setStatus] = useState("Ready to sign in.");
   const [user, setUser] = useState<AppUser | null>(null);
   const [leaderboard, setLeaderboard] = useState<AppUser[]>([]);
 
@@ -104,7 +104,7 @@ export function LoginForm() {
       setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
     } catch (loadError) {
       console.error(loadError);
-      setStatus("Backend unavailable. Start Express and Postgres first.");
+      setStatus("Could not reach the game server. You can still create an account.");
     }
   }
 
@@ -224,14 +224,14 @@ export function LoginForm() {
         <div className={styles.modeSwitch}>
           <button
             type="button"
-            className={mode === "sign-in" ? styles.modeActive : undefined}
+            className={mode === "sign-in" ? styles.modeActive : ""}
             onClick={() => setMode("sign-in")}
           >
             Login
           </button>
           <button
             type="button"
-            className={mode === "create-account" ? styles.modeActive : undefined}
+            className={mode === "create-account" ? styles.modeActive : ""}
             onClick={() => setMode("create-account")}
           >
             Register

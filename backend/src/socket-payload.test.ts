@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  requireAttackScore,
   requireLobbyId,
   requireReadyValue,
   requireTargetUserId,
@@ -38,14 +37,3 @@ test("requireTargetUserId trims ids and rejects blanks", () => {
   );
 });
 
-test("requireAttackScore validates graph percentages with useful messages", () => {
-  assert.equal(requireAttackScore(84.4), 84);
-  assert.throws(
-    () => requireAttackScore("not-a-number"),
-    /Attack score must be a number between 0 and 100\./,
-  );
-  assert.throws(
-    () => requireAttackScore(101),
-    /Attack score must stay between 0 and 100\./,
-  );
-});

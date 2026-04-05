@@ -14,6 +14,7 @@ import styles from "./page.module.css";
 import {
   drawGrid,
   drawGroundTruth,
+  equationConfigFromDescriptor,
   parseEquationCsv,
   scoreDrawing,
   selectRandomEquation,
@@ -31,7 +32,7 @@ type GraphBattlePanelProps = {
   selectedTargetId: string | null;
   disabled: boolean;
   solo?: boolean;
-  onSuccessfulScore: (targetUserId: string, score: number) => Promise<void>;
+  onSuccessfulScore: (targetUserId: string, trails: Record<string, unknown>) => Promise<{ total: number; shape: number; position: number } | undefined>;
   socket?: Socket | null;
   lobbyId?: string;
 };
@@ -78,8 +79,8 @@ const HAND_MODEL_URL =
 const GESTURE_MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task";
 
-function formatPlayerName(player: Pick<LobbyPlayer, "displayName" | "email" | "firebaseUid">) {
-  return player.displayName || player.email || player.firebaseUid;
+function formatPlayerName(player: Pick<LobbyPlayer, "displayName">) {
+  return player.displayName || "Unknown player";
 }
 
 function getHealthPercent(match: LobbyMatch | null, userId: string) {
@@ -132,6 +133,9 @@ export function GraphBattlePanel({
   const [equationMarkup, setEquationMarkup] = useState("");
   const [localError, setLocalError] = useState("");
   const [lockedTargetId, setLockedTargetId] = useState<string | null>(null);
+  const [learnMode, setLearnMode] = useState(Boolean(solo));
+  const learnModeRef = useRef(Boolean(solo));
+  const redrawGridRef = useRef<() => void>(() => undefined);
 
   const selectedOpponent = useMemo(
     () =>
@@ -162,6 +166,9 @@ export function GraphBattlePanel({
 
   useEffect(() => {
     soloRef.current = solo;
+    const nextLearnMode = Boolean(solo);
+    learnModeRef.current = nextLearnMode;
+    setLearnMode(nextLearnMode);
   }, [solo]);
 
   useEffect(() => {
@@ -289,10 +296,46 @@ export function GraphBattlePanel({
         }),
       );
       drawGrid(gridContext);
-      drawGroundTruth(gridContext, config);
+      if (learnModeRef.current) {
+        drawGroundTruth(gridContext, config);
+      }
+    }
+
+    function redrawCurrentGrid() {
+      drawGrid(gridContext);
+      if (learnModeRef.current && equationConfigRef.current) {
+        drawGroundTruth(gridContext, equationConfigRef.current);
+      }
     }
 
     function chooseNextEquation() {
+      // In multiplayer, request equation from server so it controls assignment
+      const currentSocket = socket;
+      const currentLobbyId = lobbyId;
+
+      if (currentSocket?.connected && currentLobbyId && !soloRef.current) {
+        currentSocket.emit(
+          "game:request-equation",
+          { lobbyId: currentLobbyId },
+          (result: any) => {
+            if (cancelled) return;
+
+            if (result?.ok && result.data?.equation) {
+              const config = equationConfigFromDescriptor(result.data.equation);
+              renderEquation(config);
+              setScoreDisplay("");
+            } else {
+              setLocalError("Could not load equation from server. Try clicking New Equation.");
+            }
+          },
+        );
+        return;
+      }
+
+      chooseLocalEquation();
+    }
+
+    function chooseLocalEquation() {
       const families = familiesRef.current;
 
       if (!families.length) {
@@ -351,12 +394,13 @@ export function GraphBattlePanel({
     }
 
     function launchAttack(score: number) {
-      if (score < 50 || !targetContainer) {
+      const opponentTarget = opponentCanvasRef.current ?? targetContainer;
+      if (score < 50 || !opponentTarget) {
         return;
       }
 
       const playerRect = battleContainer.getBoundingClientRect();
-      const opponentRect = targetContainer.getBoundingClientRect();
+      const opponentRect = opponentTarget.getBoundingClientRect();
       const startX = playerRect.left + playerRect.width / 2;
       const startY = playerRect.top + playerRect.height / 2;
       const endX = opponentRect.left + opponentRect.width / 2;
@@ -861,12 +905,16 @@ export function GraphBattlePanel({
               }
 
               void onSuccessfulScoreRef
-                .current(targetUserId, score.total)
-                .then(() => {
+                .current(targetUserId, { Left: [...trails.Left], Right: [...trails.Right] })
+                .then((serverScore) => {
                   if (!cancelled) {
                     setLocalError("");
+                    const displayTotal = serverScore?.total ?? score.total;
+                    setScoreDisplay(
+                      `Score: ${displayTotal} (Shape: ${serverScore?.shape ?? score.shape}, Pos: ${serverScore?.position ?? score.position})`,
+                    );
                     setTrackingStatus(
-                      `Graph cast landed on ${targetName} with a ${score.total}% score.`,
+                      `Graph cast landed on ${targetName} with a ${displayTotal}% score.`,
                     );
                   }
                 })
@@ -1239,6 +1287,7 @@ export function GraphBattlePanel({
       resetSession();
       chooseNextEquation();
     };
+    redrawGridRef.current = redrawCurrentGrid;
 
     resizeAttackCanvas();
     drawGrid(gridContext);
@@ -1497,6 +1546,34 @@ export function GraphBattlePanel({
         </div>
         <span className={styles.scoreDisplay}>{scoreDisplay || "Score: waiting for trace"}</span>
       </div>
+
+      {solo ? (
+        <div className={styles.cvLearnToggle}>
+          <label className={styles.toggleLabel}>
+            <span>Learn Mode</span>
+            <button
+              type="button"
+              className={styles.toggleSwitch}
+              role="switch"
+              aria-checked={learnMode}
+              onClick={() => {
+                const next = !learnMode;
+                setLearnMode(next);
+                learnModeRef.current = next;
+                redrawGridRef.current();
+              }}
+            >
+              <span
+                className={styles.toggleKnob}
+                style={{ transform: learnMode ? "translateX(20px)" : "translateX(0)" }}
+              />
+            </button>
+          </label>
+          <span className={styles.learnInfo} title="Learn Mode ON: the correct graph is shown as a guide while you trace. OFF: you must draw from the equation alone.">
+            i
+          </span>
+        </div>
+      ) : null}
 
       <p className={styles.muted}>
         {trackingStatus} Signed in as {formatPlayerName(currentPlayer)}.

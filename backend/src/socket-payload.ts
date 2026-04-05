@@ -1,3 +1,5 @@
+import type { TrailPoint } from "../../shared/graph-scoring";
+
 export function requireLobbyId(value: unknown) {
   if (typeof value !== "string" || !value.trim()) {
     throw new Error("Lobby id is required.");
@@ -22,16 +24,67 @@ export function requireTargetUserId(value: unknown) {
   return value.trim();
 }
 
-export function requireAttackScore(value: unknown) {
-  const score = Number(value);
+const MAX_TRAIL_POINTS = 10_000;
 
-  if (!Number.isFinite(score)) {
-    throw new Error("Attack score must be a number between 0 and 100.");
+function isValidTrailPoint(value: unknown): value is TrailPoint {
+  if (value === null) {
+    return true;
   }
 
-  if (score < 0 || score > 100) {
-    throw new Error("Attack score must stay between 0 and 100.");
+  if (typeof value !== "object" || value === null) {
+    return false;
   }
 
-  return Math.round(score);
+  const point = value as Record<string, unknown>;
+  return (
+    typeof point.x === "number" &&
+    typeof point.y === "number" &&
+    Number.isFinite(point.x) &&
+    Number.isFinite(point.y) &&
+    point.x >= -50 &&
+    point.x <= 700 &&
+    point.y >= -50 &&
+    point.y <= 550
+  );
+}
+
+export function requireTrailData(
+  value: unknown,
+): Record<"Left" | "Right", TrailPoint[]> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Trail data must include Left and Right hand arrays.");
+  }
+
+  const raw = value as Record<string, unknown>;
+
+  if (!Array.isArray(raw.Left) || !Array.isArray(raw.Right)) {
+    throw new Error("Trail data must include Left and Right hand arrays.");
+  }
+
+  const totalPoints = raw.Left.length + raw.Right.length;
+
+  if (totalPoints > MAX_TRAIL_POINTS) {
+    throw new Error(`Trail data exceeds the ${MAX_TRAIL_POINTS} point limit.`);
+  }
+
+  const left: TrailPoint[] = [];
+  const right: TrailPoint[] = [];
+
+  for (const point of raw.Left) {
+    if (!isValidTrailPoint(point)) {
+      throw new Error("Trail data contains invalid point coordinates.");
+    }
+
+    left.push(point);
+  }
+
+  for (const point of raw.Right) {
+    if (!isValidTrailPoint(point)) {
+      throw new Error("Trail data contains invalid point coordinates.");
+    }
+
+    right.push(point);
+  }
+
+  return { Left: left, Right: right };
 }

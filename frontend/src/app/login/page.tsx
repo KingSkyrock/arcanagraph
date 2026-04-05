@@ -1,13 +1,9 @@
-import type { Metadata } from "next";
+"use client";
+
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { LoginForm } from "./login-form";
 import styles from "./page.module.css";
-
-export const metadata: Metadata = {
-  title: "Login",
-  description: "Sign in to your Arcanagraph player account",
-};
 
 export default function LoginPage() {
   return (

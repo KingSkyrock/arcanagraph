@@ -27,14 +27,19 @@ export function clearSessionCookie(response: Response) {
   });
 }
 
+function sanitizeDisplayName(name: string | undefined | null): string | null {
+  if (!name) return null;
+  const trimmed = name.trim().replace(/[\x00-\x1F\x7F]/g, "");
+  if (!trimmed) return null;
+  return trimmed.length > 30 ? trimmed.slice(0, 30) : trimmed;
+}
+
 export async function createSession(idToken: string, requestedDisplayName?: string) {
   const decoded = await adminAuth.verifyIdToken(idToken);
 
   let sessionCookie: string;
 
   if (usingEmulator) {
-    // The emulator doesn't reliably support createSessionCookie without
-    // service account credentials. Use the ID token directly in dev.
     sessionCookie = idToken;
   } else {
     sessionCookie = await adminAuth.createSessionCookie(idToken, {
@@ -45,7 +50,7 @@ export async function createSession(idToken: string, requestedDisplayName?: stri
   const user = await upsertUser({
     firebaseUid: decoded.uid,
     email: decoded.email ?? null,
-    displayName: requestedDisplayName?.trim() || decoded.name?.trim() || null,
+    displayName: sanitizeDisplayName(requestedDisplayName) || sanitizeDisplayName(decoded.name) || null,
   });
 
   return { sessionCookie, user };

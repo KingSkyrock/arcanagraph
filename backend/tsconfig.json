@@ -8,6 +8,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "rootDir": "..",
     "outDir": "dist",
     "types": [
       "node"
@@ -24,7 +25,8 @@
     "jsx": "react-jsx"
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "../shared/**/*.ts"
   ],
   "exclude": [
     "node_modules"

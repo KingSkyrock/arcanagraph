@@ -37,8 +37,6 @@ export type AppUser = {
 
 export type LobbyPlayer = {
   userId: string;
-  firebaseUid: string;
-  email: string | null;
   displayName: string | null;
   xp: number;
   level: number;
@@ -227,6 +225,17 @@ export function getClassNameForLevel(level: number) {
   return "Warlock";
 }
 
+export type PublicUser = {
+  id: string;
+  displayName: string | null;
+  xp: number;
+  level: number;
+  className: string;
+  wins: number;
+  losses: number;
+  gamesPlayed: number;
+};
+
 function mapUser(row: Record<string, unknown>): AppUser {
   const level = Number(row.level ?? 1);
 
@@ -246,13 +255,26 @@ function mapUser(row: Record<string, unknown>): AppUser {
   };
 }
 
+function mapPublicUser(row: Record<string, unknown>): PublicUser {
+  const level = Number(row.level ?? 1);
+
+  return {
+    id: String(row.id),
+    displayName: (row.display_name as string | null) ?? null,
+    xp: Number(row.xp ?? 0),
+    level,
+    className: getClassNameForLevel(level),
+    wins: Number(row.wins),
+    losses: Number(row.losses),
+    gamesPlayed: Number(row.games_played),
+  };
+}
+
 function mapLobbyPlayer(row: Record<string, unknown>): LobbyPlayer {
   const level = Number(row.player_level ?? 1);
 
   return {
     userId: String(row.player_user_id),
-    firebaseUid: String(row.player_firebase_uid),
-    email: (row.player_email as string | null) ?? null,
     displayName: (row.player_display_name as string | null) ?? null,
     xp: Number(row.player_xp ?? 0),
     level,
@@ -443,6 +465,8 @@ async function recordCompletedMatch(
         wins = wins + CASE WHEN $2::uuid IS NOT NULL AND id = $2::uuid THEN 1 ELSE 0 END,
         losses = losses + CASE WHEN $2::uuid IS NOT NULL AND id <> $2::uuid THEN 1 ELSE 0 END,
         games_played = games_played + 1,
+        xp = xp + CASE WHEN $2::uuid IS NOT NULL AND id = $2::uuid THEN 100 ELSE 25 END,
+        level = GREATEST(1, FLOOR(SQRT((xp + CASE WHEN $2::uuid IS NOT NULL AND id = $2::uuid THEN 100 ELSE 25 END)::float / 100)) + 1),
         updated_at = NOW()
       WHERE id = ANY($1::uuid[])
     `,
@@ -632,7 +656,7 @@ export async function getLeaderboard(limit = 10) {
     ),
   );
 
-  return result.rows.map(mapUser);
+  return result.rows.map(mapPublicUser);
 }
 
 export async function createLobby(

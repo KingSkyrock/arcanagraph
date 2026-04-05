@@ -90,6 +90,7 @@
 .blockField {
   position: relative;
   min-height: 440px;
+  overflow: hidden;
 }
 
 .blockField span {
@@ -163,6 +164,8 @@
 }
 
 .panel {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 20px;
   padding: 28px;
@@ -211,14 +214,20 @@
 .modeSwitch button,
 .secondaryButton {
   min-height: 44px;
+  padding: 0 20px;
   border: 0;
   border-radius: 16px;
-  background: transparent;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  transition: background 180ms ease-out;
+  transition: background 180ms ease-out, color 180ms ease-out;
+}
+
+.modeSwitch button:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
 }
 
 .modeActive {

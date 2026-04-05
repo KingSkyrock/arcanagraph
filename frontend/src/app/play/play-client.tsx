@@ -19,8 +19,8 @@ type SessionResponse = {
 
 type SocketResult = { ok: true; data: { lobbyId: string } } | { ok: false; error: string };
 
-function formatPlayerName(player: Pick<LobbyPlayer, "displayName" | "email" | "firebaseUid">) {
-  return player.displayName || player.email || player.firebaseUid;
+function formatPlayerName(player: Pick<LobbyPlayer, "displayName">) {
+  return player.displayName || "Unknown player";
 }
 
 function formatPlayerRank(player: Pick<LobbyPlayer, "level" | "className" | "xp">) {
@@ -31,11 +31,24 @@ async function readJson<T>(response: Response) {
   return (await response.json()) as T;
 }
 
-export function PlayClient() {
+const DIFFICULTY_LABELS: Record<string, string> = {
+  shapes: "Shapes",
+  beginner: "Beginner Functions",
+  advanced: "Advanced Functions",
+  custom: "Custom",
+};
+
+type PlayClientProps = {
+  autoCreateWithDifficulty?: string | null;
+  joinInviteCode?: string;
+};
+
+export function PlayClient({ autoCreateWithDifficulty, joinInviteCode }: PlayClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeLobbyId = searchParams.get("lobby");
   const socketRef = useRef<Socket | null>(null);
+  const autoActionDone = useRef(false);
   const [socketConnected, setSocketConnected] = useState(false);
   const [user, setUser] = useState<AppUser | null>(null);
   const [lobby, setLobby] = useState<Lobby | null>(null);
@@ -146,6 +159,38 @@ export function PlayClient() {
     }
   }, [activeLobbyId, lobby, router]);
 
+  // Auto-create lobby or auto-join via invite code when props are provided
+  useEffect(() => {
+    if (!socketConnected || !user || autoActionDone.current || activeLobbyId) {
+      return;
+    }
+
+    if (autoCreateWithDifficulty) {
+      autoActionDone.current = true;
+      void handleCreateLobby(autoCreateWithDifficulty);
+    } else if (joinInviteCode) {
+      autoActionDone.current = true;
+      setInviteCode(joinInviteCode);
+      void (async () => {
+        setBusy(true);
+        setError("");
+        try {
+          const result = await emitLobbyEvent("lobby:join", {
+            inviteCode: joinInviteCode.trim().toUpperCase(),
+          });
+          if (!result.ok) throw new Error(result.error);
+          await loadLobby(result.data.lobbyId);
+          router.replace(`/play?lobby=${result.data.lobbyId}`);
+        } catch (e) {
+          console.error(e);
+          setError(e instanceof Error ? e.message : "Could not join lobby.");
+        } finally {
+          setBusy(false);
+        }
+      })();
+    }
+  }, [socketConnected, user, autoCreateWithDifficulty, joinInviteCode, activeLobbyId]);
+
   async function loadSession() {
     try {
       const response = await fetch(apiUrl("/api/auth/me"), {
@@ -211,7 +256,7 @@ export function PlayClient() {
     });
   }
 
-  async function handleCreateLobby() {
+  async function handleCreateLobby(difficulty?: string | null) {
     setBusy(true);
     setError("");
 
@@ -226,6 +271,7 @@ export function PlayClient() {
           settings: {
             mode: "trace-duel",
             curriculum: "default",
+            difficulty: difficulty || "advanced",
           },
         }),
       });
@@ -391,70 +437,42 @@ export function PlayClient() {
     );
   }
 
+  const lobbyDifficulty = lobby?.settings?.difficulty as string | undefined;
+  const difficultyLabel = lobbyDifficulty ? (DIFFICULTY_LABELS[lobbyDifficulty] || lobbyDifficulty) : "Default";
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px,420px) minmax(0,1fr)', gap: 24 }}>
-      <div style={panelStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
-          <div>
-            <p style={labelStyle}>Matchmaking</p>
-            <h2 style={headingStyle}>Create or join</h2>
-          </div>
+    <div style={panelStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
+        <div>
+          <p style={labelStyle}>Active lobby</p>
+          <h2 style={headingStyle}>{lobby ? lobby.inviteCode : "Setting up..."}</h2>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {lobby ? <span style={pillStyle}>{difficultyLabel}</span> : null}
           <span style={pillStyle}>{socketConnected ? "Socket online" : "Socket offline"}</span>
-        </div>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-          <button style={legoBtn} type="button" onClick={handleCreateLobby} disabled={busy}>Create lobby</button>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 10, width: 'min(100%,340px)' }}>
-            <input
-              value={inviteCode}
-              onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
-              placeholder="Invite code"
-              maxLength={6}
-              style={{
-                minHeight: 48, padding: '0 14px', border: '1px solid rgba(255,255,255,0.18)',
-                borderRadius: 18, background: 'rgba(255,255,255,0.14)', color: '#fff',
-                fontWeight: 700, textTransform: 'uppercase', fontSize: 16,
-              }}
-            />
-            <button
-              type="button" style={ghostBtn}
-              onClick={handleJoinLobby}
-              disabled={busy || !socketConnected || !inviteCode.trim()}
-            >Join</button>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gap: 10, padding: 18, borderRadius: 22, background: 'rgba(255,255,255,0.14)' }}>
-          <p style={labelStyle}>Status</p>
-          <strong style={{ fontSize: 20, lineHeight: 1.35 }}>{status}</strong>
-          {error ? <p style={{ color: '#fca5a5', fontSize: 14 }}>{error}</p> : null}
         </div>
       </div>
 
-      <div style={panelStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
-          <div>
-            <p style={labelStyle}>Active lobby</p>
-            <h2 style={headingStyle}>{lobby ? lobby.inviteCode : "No lobby selected"}</h2>
-          </div>
-          {lobby ? <span style={pillStyle}>{lobby.state}</span> : null}
-        </div>
+      <div style={{ display: 'grid', gap: 10, padding: 18, borderRadius: 22, background: 'rgba(255,255,255,0.14)' }}>
+        <p style={labelStyle}>Status</p>
+        <strong style={{ fontSize: 20, lineHeight: 1.35 }}>{status}</strong>
+        {error ? <p style={{ color: '#fca5a5', fontSize: 14 }}>{error}</p> : null}
+      </div>
 
-        {lobby ? (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}>
-              {[
-                { label: 'Invite code', value: lobby.inviteCode },
-                { label: 'Players', value: String(lobby.players.length) },
-                { label: 'Host', value: isHost ? 'You' : 'Another player' },
-              ].map(d => (
-                <div key={d.label} style={{ display: 'grid', gap: 6, padding: 18, borderRadius: 22, background: 'rgba(255,255,255,0.1)' }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>{d.label}</span>
-                  <strong style={{ fontSize: 24, lineHeight: 1, color: '#fff' }}>{d.value}</strong>
-                </div>
-              ))}
-            </div>
+      {lobby ? (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}>
+            {[
+              { label: 'Invite code', value: lobby.inviteCode },
+              { label: 'Players', value: String(lobby.players.length) },
+              { label: 'Host', value: isHost ? 'You' : 'Another player' },
+            ].map(d => (
+              <div key={d.label} style={{ display: 'grid', gap: 6, padding: 18, borderRadius: 22, background: 'rgba(255,255,255,0.1)' }}>
+                <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>{d.label}</span>
+                <strong style={{ fontSize: 24, lineHeight: 1, color: '#fff' }}>{d.value}</strong>
+              </div>
+            ))}
+          </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <button type="button" style={ghostBtn} onClick={handleReadyToggle} disabled={busy || !currentPlayer || lobby.state !== "waiting"}>
@@ -490,10 +508,9 @@ export function PlayClient() {
           </>
         ) : (
           <p style={{ fontSize: 16, lineHeight: 1.7, color: 'rgba(255,255,255,0.84)' }}>
-            Create a lobby or join one with an invite code to start a multiplayer match.
+            Creating your lobby...
           </p>
         )}
-      </div>
     </div>
   );
 }

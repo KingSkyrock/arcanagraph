@@ -4,7 +4,6 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "==> Killing stale processes (node, next, firebase)..."
-# Kill anything on ports 3000 (next), 4000 (backend), 9099 (firebase auth), 4001 (emulator ui)
 for port in 3000 4000 9099 4001; do
   pid=$(lsof -ti :"$port" 2>/dev/null || true)
   if [ -n "$pid" ]; then
@@ -30,4 +29,7 @@ npm --prefix frontend install --silent 2>/dev/null
 npm --prefix backend install --silent 2>/dev/null
 
 echo "==> Starting dev servers (frontend + backend + firebase emulator)..."
-exec npm run dev
+exec npx concurrently -k -n frontend,backend,auth -c blue,green,magenta \
+  "npm run dev:frontend" \
+  "npm run dev:backend" \
+  "npm run dev:emulator"

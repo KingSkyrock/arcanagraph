@@ -11,8 +11,6 @@ import styles from "../[lobbyId]/page.module.css";
 function userToLobbyPlayer(user: AppUser): LobbyPlayer {
   return {
     userId: user.id,
-    firebaseUid: user.firebaseUid,
-    email: user.email,
     displayName: user.displayName,
     xp: user.xp,
     level: user.level,
@@ -85,7 +83,7 @@ export default function SoloGamePage() {
           selectedTargetId={null}
           disabled={true}
           solo
-          onSuccessfulScore={async () => {}}
+          onSuccessfulScore={async () => undefined}
         />
       </section>
     </main>

@@ -213,9 +213,6 @@ function HeroSection() {
         </span>
       </button>
 
-      <style>{`
-        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(7px)} }
-      `}</style>
     </section>
   );
 }
@@ -321,11 +318,6 @@ function LeaderboardSection() {
 export default function HomePage() {
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Nunito', system-ui, sans-serif; }
-      `}</style>
       <Navbar />
       <HeroSection />
       <LeaderboardSection />

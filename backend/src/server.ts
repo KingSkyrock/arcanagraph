@@ -6,11 +6,20 @@ import path from "node:path";
 import { Server as SocketIOServer } from "socket.io";
 import { config } from "./config";
 import {
-  requireAttackScore,
   requireLobbyId,
   requireReadyValue,
   requireTargetUserId,
+  requireTrailData,
 } from "./socket-payload";
+import { scoreDrawing, type ScoreResult } from "../../shared/graph-scoring";
+import type { SerializableEquation } from "../../shared/graph-scoring";
+import {
+  assignEquation,
+  clearAssignment,
+  clearLobby,
+  getAssignedConfig,
+  loadEquations,
+} from "./equation-state";
 import {
   clearSessionCookie,
   createSession,
@@ -39,7 +48,7 @@ type SocketPayload = {
   lobbyId?: string;
   ready?: boolean;
   targetUserId?: string;
-  score?: number;
+  trails?: unknown;
 };
 
 function getStatusCode(error: unknown) {
@@ -337,30 +346,86 @@ function registerLobbySockets(io: SocketIOServer) {
       },
     );
 
+    // Rate limiting: 3s cooldown per player on drawing submissions
+    const ATTACK_COOLDOWN_MS = 3000;
+    let lastAttackTime = 0;
+
+    type EquationAck = SocketResult<{ lobbyId: string; equation: SerializableEquation }>;
+    type ScoreAck = SocketResult<{ lobbyId: string; score: Pick<ScoreResult, "total" | "shape" | "position"> }>;
+
     socket.on(
-      "game:attack",
+      "game:request-equation",
       async (
         payload: SocketPayload,
-        ack?: (result: SocketResult<{ lobbyId: string }>) => void,
+        ack?: (result: EquationAck) => void,
       ) => {
         try {
+          const lobbyId = requireLobbyId(payload.lobbyId);
+          // Read lobby settings to get the difficulty the host chose
+          const lobby = await getLobbyByIdForUser(lobbyId, user.id);
+          const difficulty = typeof lobby.settings.difficulty === "string"
+            ? lobby.settings.difficulty
+            : undefined;
+          const equation = assignEquation(lobbyId, user.id, difficulty);
+          ack?.({ ok: true, data: { lobbyId, equation } });
+        } catch (error) {
+          emitFailure(ack, error);
+        }
+      },
+    );
+
+    socket.on(
+      "game:submit-drawing",
+      async (
+        payload: SocketPayload,
+        ack?: (result: ScoreAck) => void,
+      ) => {
+        try {
+          const now = Date.now();
+
+          if (now - lastAttackTime < ATTACK_COOLDOWN_MS) {
+            throw new Error("Wait a moment before submitting another drawing.");
+          }
+
+          lastAttackTime = now;
+
+          const lobbyId = requireLobbyId(payload.lobbyId);
+          const targetUserId = requireTargetUserId(payload.targetUserId);
+          const trails = requireTrailData(payload.trails);
+          const equationConfig = getAssignedConfig(lobbyId, user.id);
+
+          if (!equationConfig) {
+            throw new Error("No equation assigned. Request an equation first.");
+          }
+
+          // Invalidate the assignment so this equation can't be resubmitted
+          clearAssignment(lobbyId, user.id);
+
+          const result = scoreDrawing(trails, equationConfig);
           const lobby = await attackLobbyPlayer(
-            requireLobbyId(payload.lobbyId),
+            lobbyId,
             user.id,
-            requireTargetUserId(payload.targetUserId),
-            requireAttackScore(payload.score),
+            targetUserId,
+            result.total,
           );
 
           io.to(`lobby:${lobby.id}`).emit("lobby:update", { lobby });
 
           if (lobby.match?.status === "finished") {
+            clearLobby(lobby.id);
             io.to(`lobby:${lobby.id}`).emit("game:over", {
               lobbyId: lobby.id,
               winnerUserId: lobby.match.winnerUserId,
             });
           }
 
-          ack?.({ ok: true, data: { lobbyId: lobby.id } });
+          ack?.({
+            ok: true,
+            data: {
+              lobbyId: lobby.id,
+              score: { total: result.total, shape: result.shape, position: result.position },
+            },
+          });
         } catch (error) {
           emitFailure(ack, error);
         }
@@ -374,7 +439,9 @@ function registerLobbySockets(io: SocketIOServer) {
         ack?: (result: SocketResult<{ lobbyId: string }>) => void,
       ) => {
         try {
-          const lobby = await restartLobbyMatch(requireLobbyId(payload.lobbyId), user.id);
+          const lobbyId = requireLobbyId(payload.lobbyId);
+          const lobby = await restartLobbyMatch(lobbyId, user.id);
+          clearLobby(lobbyId);
           io.to(`lobby:${lobby.id}`).emit("lobby:update", { lobby });
           io.to(`lobby:${lobby.id}`).emit("game:restarted", {
             lobbyId: lobby.id,
@@ -425,6 +492,7 @@ function registerLobbySockets(io: SocketIOServer) {
 }
 
 async function start() {
+  loadEquations();
   await ensureDatabaseSchema();
   await pingDatabase();
 

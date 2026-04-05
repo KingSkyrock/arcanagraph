@@ -16,8 +16,6 @@ export type MatchStatus = "active" | "finished";
 
 export type LobbyPlayer = {
   userId: string;
-  firebaseUid: string;
-  email: string | null;
   displayName: string | null;
   xp: number;
   level: number;

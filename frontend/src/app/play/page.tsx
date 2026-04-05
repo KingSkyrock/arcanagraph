@@ -1,7 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { Suspense } from 'react';
 import Navbar from '@/components/Navbar';
 import { PlayClient } from './play-client';
 
@@ -35,14 +34,21 @@ function BgPattern() {
   );
 }
 
-export default function PlayPage() {
-  const [step, setStep] = useState('mode');
-  const [mode, setMode] = useState<string | null>(null);
-  const router = useRouter();
+type Step = 'mode' | 'battle' | 'type' | 'lobby';
 
-  function goToSolo() {
-    router.push('/game/solo');
-  }
+const DIFFICULTIES = [
+  { id: 'shapes', label: 'Shapes', bg: 'rgb(34, 197, 94)', shadow: 'rgb(21, 128, 61)', hover: 'rgb(22, 163, 74)' },
+  { id: 'beginner', label: 'Beginner Functions', bg: 'rgb(245, 158, 11)', shadow: 'rgb(180, 83, 9)', hover: 'rgb(217, 119, 6)' },
+  { id: 'advanced', label: 'Advanced Functions', bg: 'rgb(239, 104, 104)', shadow: 'rgb(185, 28, 28)', hover: 'rgb(220, 38, 38)' },
+  { id: 'custom', label: 'Custom', bg: 'rgb(162, 28, 175)', shadow: 'rgb(112, 26, 117)', hover: 'rgb(134, 25, 143)' },
+] as const;
+
+export default function PlayPage() {
+  const [step, setStep] = useState<Step>('mode');
+  const [mode, setMode] = useState<'solo' | 'battle' | null>(null);
+  const [difficulty, setDifficulty] = useState<string | null>(null);
+  const [joinCode, setJoinCode] = useState('');
+  const router = useRouter();
 
   const getLegoStyle = (bg: string, shadow: string, isSmall = false): React.CSSProperties => ({
     textDecoration: 'none',
@@ -83,28 +89,67 @@ export default function PlayPage() {
     e.currentTarget.style.boxShadow = `0 0px 0px ${shadow}, 0 2px 4px rgba(0, 0, 0, 0.2)`;
   };
 
-  // Battle mode shows the lobby flow
-  if (mode === 'battle' && step === 'lobby') {
+  function handleDifficultyPick(diff: string) {
+    setDifficulty(diff);
+    if (mode === 'solo') {
+      router.push('/game/solo');
+    } else {
+      // Battle create: go to lobby with auto-create
+      setStep('lobby');
+    }
+  }
+
+  function goBack() {
+    if (step === 'type') {
+      setStep(mode === 'battle' ? 'battle' : 'mode');
+      setDifficulty(null);
+    } else if (step === 'battle') {
+      setStep('mode');
+      setMode(null);
+    } else if (step === 'lobby') {
+      setStep('battle');
+      setDifficulty(null);
+    } else {
+      setStep('mode');
+      setMode(null);
+    }
+  }
+
+  const pageStyle: React.CSSProperties = {
+    minHeight: '100vh',
+    background: 'linear-gradient(180deg, rgb(37, 99, 235) 0%, rgb(59, 130, 246) 100%)',
+    color: 'rgb(255, 255, 255)',
+    position: 'relative',
+    overflow: 'hidden',
+  };
+
+  const backBtn = (
+    <button
+      onClick={goBack}
+      style={{ marginTop: 40, background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline', fontSize: 16 }}
+    >
+      Back
+    </button>
+  );
+
+  // Lobby view (battle mode, after create or join)
+  if (step === 'lobby') {
     return (
-      <main style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(180deg, rgb(37, 99, 235) 0%, rgb(59, 130, 246) 100%)',
-        color: 'rgb(255, 255, 255)',
-        position: 'relative',
-        overflow: 'hidden',
-        padding: '112px 28px 36px',
-      }}>
+      <main style={{ ...pageStyle, padding: '112px 28px 36px' }}>
         <Navbar />
         <BgPattern />
         <div style={{ position: 'relative', zIndex: 10, maxWidth: 900, margin: '0 auto' }}>
           <button
-            onClick={() => { setStep('mode'); setMode(null); }}
+            onClick={goBack}
             style={{ marginBottom: 24, background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline', fontSize: 16 }}
           >
             Back to Mode Selection
           </button>
           <Suspense fallback={<div style={{ textAlign: 'center', fontWeight: 700, padding: 48 }}>Loading lobby tools...</div>}>
-            <PlayClient />
+            <PlayClient
+              autoCreateWithDifficulty={difficulty}
+              joinInviteCode={joinCode || undefined}
+            />
           </Suspense>
         </div>
       </main>
@@ -112,13 +157,7 @@ export default function PlayPage() {
   }
 
   return (
-    <main style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(180deg, rgb(37, 99, 235) 0%, rgb(59, 130, 246) 100%)',
-      color: 'rgb(255, 255, 255)',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
+    <main style={pageStyle}>
       <Navbar />
       <BgPattern />
 
@@ -150,11 +189,12 @@ export default function PlayPage() {
         position: 'relative',
         zIndex: 10,
       }}>
+        {/* Step 1: Pick mode */}
         {step === 'mode' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32, alignItems: 'center', width: '100%' }}>
             <h2 style={{
               fontFamily: "'Impact', 'Arial Black', sans-serif",
-              fontSize: 56, color: 'rgb(255, 255, 255)', marginBottom: 20
+              fontSize: 56, color: '#fff', marginBottom: 20
             }}>Pick Your Quest</h2>
 
             <button
@@ -174,13 +214,80 @@ export default function PlayPage() {
               onMouseLeave={e => handleMouseLeave(e, 'rgb(241, 116, 88)', 'rgb(234, 61, 22)', false)}
               onMouseDown={e => handleMouseDown(e, 'rgb(241, 116, 88)')}
               onMouseUp={e => handleMouseEnter(e, 'rgb(241, 116, 88)', false, 'rgb(234, 61, 22)')}
-              onClick={() => { setMode('battle'); setStep('type'); }}
+              onClick={() => { setMode('battle'); setStep('battle'); }}
             >
               BATTLE
             </button>
           </div>
         )}
 
+        {/* Step 2 (Battle): Create or Join */}
+        {step === 'battle' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32, alignItems: 'center', width: '100%' }}>
+            <h2 style={{
+              fontFamily: "'Impact', 'Arial Black', sans-serif",
+              fontSize: 48, color: '#fff', marginBottom: 20
+            }}>Battle Mode</h2>
+
+            <button
+              style={getLegoStyle('rgb(245, 158, 11)', 'rgb(180, 83, 9)')}
+              onMouseEnter={e => handleMouseEnter(e, 'rgb(180, 83, 9)', false, 'rgb(217, 119, 6)')}
+              onMouseLeave={e => handleMouseLeave(e, 'rgb(245, 158, 11)', 'rgb(180, 83, 9)', false)}
+              onMouseDown={e => handleMouseDown(e, 'rgb(180, 83, 9)')}
+              onMouseUp={e => handleMouseEnter(e, 'rgb(180, 83, 9)', false, 'rgb(217, 119, 6)')}
+              onClick={() => setStep('type')}
+            >
+              CREATE LOBBY
+            </button>
+
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', width: '100%', maxWidth: 450,
+            }}>
+              <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.2)', margin: '8px 0' }} />
+              <span style={{ fontWeight: 800, fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>
+                Or join with invite code
+              </span>
+              <div style={{ display: 'flex', gap: 12, width: '100%', maxWidth: 380 }}>
+                <input
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  placeholder="INVITE CODE"
+                  maxLength={6}
+                  style={{
+                    flex: 1, minHeight: 52, padding: '0 18px',
+                    border: '2px solid rgba(255,255,255,0.24)', borderRadius: 16,
+                    background: 'rgba(255,255,255,0.14)', color: '#fff',
+                    fontWeight: 800, textTransform: 'uppercase', fontSize: 18,
+                    textAlign: 'center', letterSpacing: '0.2em',
+                  }}
+                />
+                <button
+                  style={{
+                    ...getLegoStyle('rgb(59, 130, 246)', 'rgb(29, 78, 216)', true),
+                    width: 'auto', maxWidth: 'none', padding: '0 28px',
+                  }}
+                  onMouseEnter={e => handleMouseEnter(e, 'rgb(29, 78, 216)', true, 'rgb(37, 99, 235)')}
+                  onMouseLeave={e => handleMouseLeave(e, 'rgb(59, 130, 246)', 'rgb(29, 78, 216)', true)}
+                  onMouseDown={e => handleMouseDown(e, 'rgb(29, 78, 216)')}
+                  onMouseUp={e => handleMouseEnter(e, 'rgb(29, 78, 216)', true, 'rgb(37, 99, 235)')}
+                  onClick={() => {
+                    if (joinCode.trim()) {
+                      setDifficulty(null);
+                      setStep('lobby');
+                    }
+                  }}
+                  disabled={!joinCode.trim()}
+                >
+                  JOIN
+                </button>
+              </div>
+            </div>
+
+            {backBtn}
+          </div>
+        )}
+
+        {/* Difficulty picker (Solo always, Battle when creating) */}
         {step === 'type' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
             <h2 style={{
@@ -188,54 +295,23 @@ export default function PlayPage() {
               fontSize: 48, color: 'rgb(222, 218, 252)', marginBottom: 40
             }}>Choose Difficulty</h2>
 
-            <div style={{ fontWeight: 700, color: 'rgb(248, 247, 250)', fontSize: 16, marginBottom: 8, width: '100%', maxWidth: 380 }}>Presets</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', alignItems: 'center', marginBottom: 32 }}>
-
-              <button
-                style={getLegoStyle('rgb(34, 197, 94)', 'rgb(21, 128, 61)', true)}
-                onMouseEnter={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
-                onMouseLeave={e => handleMouseLeave(e, 'rgb(34, 197, 94)', 'rgb(21, 128, 61)', true)}
-                onMouseDown={e => handleMouseDown(e, 'rgb(21, 128, 61)')}
-                onMouseUp={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
-                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
-              >Shapes</button>
-
-              <button
-                style={getLegoStyle('rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}
-                onMouseEnter={e => handleMouseEnter(e, 'rgb(180, 83, 9)', true, 'rgb(217, 119, 6)')}
-                onMouseLeave={e => handleMouseLeave(e, 'rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}
-                onMouseDown={e => handleMouseDown(e, 'rgb(180, 83, 9)')}
-                onMouseUp={e => handleMouseEnter(e, 'rgb(180, 83, 9)', true, 'rgb(217, 119, 6)')}
-                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
-              >Beginner Functions</button>
-
-              <button
-                style={getLegoStyle('rgb(239, 104, 104)', 'rgb(185, 28, 28)', true)}
-                onMouseEnter={e => handleMouseEnter(e, 'rgb(185, 28, 28)', true, 'rgb(220, 38, 38)')}
-                onMouseLeave={e => handleMouseLeave(e, 'rgb(239, 104, 104)', 'rgb(185, 28, 28)', true)}
-                onMouseDown={e => handleMouseDown(e, 'rgb(185, 28, 28)')}
-                onMouseUp={e => handleMouseEnter(e, 'rgb(185, 28, 28)', true, 'rgb(220, 38, 38)')}
-                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
-              >Advanced Functions</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', alignItems: 'center' }}>
+              {DIFFICULTIES.map(d => (
+                <button
+                  key={d.id}
+                  style={getLegoStyle(d.bg, d.shadow, true)}
+                  onMouseEnter={e => handleMouseEnter(e, d.shadow, true, d.hover)}
+                  onMouseLeave={e => handleMouseLeave(e, d.bg, d.shadow, true)}
+                  onMouseDown={e => handleMouseDown(e, d.shadow)}
+                  onMouseUp={e => handleMouseEnter(e, d.shadow, true, d.hover)}
+                  onClick={() => handleDifficultyPick(d.id)}
+                >
+                  {d.label}
+                </button>
+              ))}
             </div>
 
-            <div style={{ fontWeight: 700, color: 'rgb(224, 224, 242)', fontSize: 16, marginBottom: 8, width: '100%', maxWidth: 380 }}>Custom</div>
-
-            <button
-              style={getLegoStyle('rgb(162, 28, 175)', 'rgb(112, 26, 117)', true)}
-              onMouseEnter={e => handleMouseEnter(e, 'rgb(112, 26, 117)', true, 'rgb(134, 25, 143)')}
-              onMouseLeave={e => handleMouseLeave(e, 'rgb(162, 28, 175)', 'rgb(112, 26, 117)', true)}
-              onMouseDown={e => handleMouseDown(e, 'rgb(112, 26, 117)')}
-              onMouseUp={e => handleMouseEnter(e, 'rgb(112, 26, 117)', true, 'rgb(134, 25, 143)')}
-              onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
-            >Custom</button>
-
-            <button
-              onClick={() => { setStep('mode'); setMode(null); }}
-              style={{ marginTop: 40, background: 'none', border: 'none', color: 'rgb(255, 255, 255)', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline' }}
-            >
-              Back to Mode Selection
-            </button>
+            {backBtn}
           </div>
         )}
       </div>

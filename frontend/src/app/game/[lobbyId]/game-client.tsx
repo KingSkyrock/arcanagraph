@@ -30,10 +30,10 @@ type SessionResponse = {
   error?: string;
 };
 
-type SocketResult = { ok: true; data: { lobbyId: string } } | { ok: false; error: string };
+type SocketResult = { ok: true; data: Record<string, unknown> & { lobbyId: string } } | { ok: false; error: string };
 
-function formatPlayerName(player: Pick<LobbyPlayer, "displayName" | "email" | "firebaseUid">) {
-  return player.displayName || player.email || player.firebaseUid;
+function formatPlayerName(player: Pick<LobbyPlayer, "displayName">) {
+  return player.displayName || "Unknown player";
 }
 
 function formatPlayerRank(player: Pick<LobbyPlayer, "level" | "className" | "xp">) {
@@ -347,24 +347,33 @@ export function GameClient({ lobbyId }: GameClientProps) {
     });
   }
 
-  async function handleGraphAttack(targetUserId: string, score: number) {
+  async function handleGraphAttack(
+    targetUserId: string,
+    trails: Record<string, unknown>,
+  ): Promise<{ total: number; shape: number; position: number } | undefined> {
     if (!lobby || !user) {
-      return;
+      return undefined;
     }
 
     setCastingTargetId(targetUserId);
     setError("");
 
     try {
-      const result = await emitSocketEvent("game:attack", {
+      const result = await emitSocketEvent("game:submit-drawing", {
         lobbyId: lobby.id,
         targetUserId,
-        score,
+        trails,
       });
 
       if (!result.ok) {
         throw new Error(result.error);
       }
+
+      // Return the server-computed score so the panel can display it
+      const serverScore = result.data.score as
+        | { total: number; shape: number; position: number }
+        | undefined;
+      return serverScore;
     } catch (attackError) {
       console.error(attackError);
       setError(attackError instanceof Error ? attackError.message : "Could not attack player.");
