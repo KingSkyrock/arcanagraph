@@ -1,0 +1,584 @@
+.page {
+  display: grid;
+  gap: 28px;
+  min-height: 100vh;
+  padding: 40px 44px 56px;
+}
+
+.hero {
+  display: grid;
+  gap: 20px;
+}
+
+.heroCopy {
+  display: grid;
+  gap: 18px;
+  max-width: 780px;
+}
+
+.kicker {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.hero h1 {
+  max-width: 11ch;
+  font-size: clamp(52px, 7vw, 84px);
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+}
+
+.copy {
+  max-width: 46rem;
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.linkButton,
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.35);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    background-color 180ms ease-out;
+}
+
+.linkButton:hover,
+.actionButton:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.arena {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 36px;
+  background:
+    radial-gradient(circle at top center, rgba(255, 255, 255, 0.42), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(214, 255, 92, 0.22));
+  box-shadow: var(--shadow);
+}
+
+.arenaHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  gap: 20px;
+  align-items: end;
+}
+
+.arenaHeader h2 {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.note {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  min-height: 480px;
+  overflow: hidden;
+}
+
+.spellPlane {
+  position: absolute;
+  inset: 18px 0 78px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.panel {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(45, 17, 217, 0.16);
+  border-radius: 28px;
+  background: rgba(237, 255, 152, 0.52);
+  backdrop-filter: blur(10px);
+}
+
+.leftPanel {
+  box-shadow: inset 0 0 0 1px rgba(61, 8, 255, 0.06);
+}
+
+.rightPanel {
+  box-shadow: inset 0 0 0 1px rgba(255, 201, 59, 0.08);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.teamLabel {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.panelHeader h2 {
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.teamChip {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(61, 8, 255, 0.12);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.facecamShell {
+  position: relative;
+  border-radius: 32px;
+  isolation: isolate;
+}
+
+.facecam {
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+  min-height: 320px;
+  border-radius: 32px;
+  border: 2px solid rgba(61, 8, 255, 0.24);
+  background: rgba(31, 13, 107, 0.9);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 24px 54px rgba(33, 0, 181, 0.24);
+}
+
+.leftFacecam {
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 245, 160, 0.16), transparent 26%),
+    linear-gradient(135deg, #1d06ad 0%, #2f0ffc 52%, #2100b5 100%);
+}
+
+.rightFacecam {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 245, 160, 0.14), transparent 26%),
+    linear-gradient(225deg, #1a02a4 0%, #3d08ff 50%, #180084 100%);
+}
+
+.facecamBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+}
+
+.facecamCore {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+}
+
+.avatarHalo {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 233, 126, 0.22), transparent 66%);
+  filter: blur(8px);
+}
+
+.avatarOrb {
+  position: relative;
+  width: min(38vw, 140px);
+  height: min(38vw, 140px);
+  border-radius: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02)),
+    rgba(7, 2, 51, 0.68);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 18px 40px rgba(0, 0, 0, 0.26);
+}
+
+.facecamText {
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.localParticles {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  opacity: 0.62;
+  pointer-events: none;
+}
+
+.particleCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.actionButton {
+  min-height: 52px;
+  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12)),
+    rgba(33, 0, 181, 0.1);
+}
+
+.actionButton:active {
+  transform: translateY(1px);
+}
+
+.customizer {
+  display: grid;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 36px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.34), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(237, 255, 152, 0.24));
+  box-shadow: var(--shadow);
+}
+
+.customizerHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  gap: 20px;
+  align-items: end;
+}
+
+.customizerHeader h2 {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.customizerGrid {
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.previewPanel {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid rgba(45, 17, 217, 0.16);
+  border-radius: 28px;
+  background: rgba(237, 255, 152, 0.52);
+}
+
+.previewLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.pixelShell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 420px;
+  padding: 28px;
+  overflow: hidden;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(18, 6, 40, 0.06), rgba(61, 8, 255, 0.16)),
+    rgba(35, 12, 115, 0.86);
+}
+
+.pixelAura {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 235, 116, 0.24), transparent 68%);
+  filter: blur(12px);
+}
+
+.pixelBoard {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  gap: 0;
+  width: min(100%, 320px);
+  aspect-ratio: 1;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 16%),
+    rgba(12, 5, 45, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 22px 40px rgba(4, 0, 20, 0.28);
+}
+
+.pixelCell {
+  aspect-ratio: 1;
+}
+
+.pixelPedestal {
+  position: absolute;
+  bottom: 28px;
+  width: 180px;
+  height: 18px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 220, 95, 0.34), transparent 72%);
+  filter: blur(6px);
+}
+
+.selectionSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.selectionPill {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(45, 17, 217, 0.14);
+  background: rgba(255, 255, 255, 0.26);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.customizerControls {
+  display: grid;
+  gap: 16px;
+}
+
+.carouselSection {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(45, 17, 217, 0.16);
+  border-radius: 24px;
+  background: rgba(237, 255, 152, 0.42);
+}
+
+.carouselHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.carouselLabel {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.carouselHeader h3 {
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.carouselCount {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.carouselBody {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.carouselButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(45, 17, 217, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.34);
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out,
+    background-color 180ms ease-out;
+}
+
+.carouselButton:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.carouselViewport {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.optionCard {
+  display: grid;
+  gap: 8px;
+  min-height: 104px;
+  padding: 14px;
+  border: 1px solid rgba(45, 17, 217, 0.12);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.26);
+  opacity: 0.56;
+  transform: scale(0.95);
+  transition:
+    transform 180ms ease-out,
+    opacity 180ms ease-out,
+    background-color 180ms ease-out,
+    border-color 180ms ease-out;
+}
+
+.optionCard p {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.optionCard strong {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.activeOption {
+  opacity: 1;
+  transform: scale(1.02);
+  border-color: rgba(61, 8, 255, 0.22);
+  background: rgba(61, 8, 255, 0.12);
+}
+
+.swatchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(18, 6, 40, 0.18);
+  border-radius: 4px;
+}
+
+@media (max-width: 1040px) {
+  .arenaHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .stage {
+    grid-template-columns: 1fr;
+  }
+
+  .spellPlane {
+    inset: 16px 0 82px;
+  }
+
+  .customizerHeader,
+  .customizerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 28px 20px 40px;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .facecam {
+    min-height: 260px;
+  }
+
+  .carouselBody {
+    grid-template-columns: 1fr;
+  }
+
+  .carouselViewport {
+    order: -1;
+  }
+
+  .pixelShell {
+    min-height: 340px;
+    padding: 20px;
+  }
+}
