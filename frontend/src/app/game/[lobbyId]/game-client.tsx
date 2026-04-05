@@ -136,7 +136,7 @@ function getPlayerOutcomeLabel(
     return player.userId === currentUserId ? "Defeated" : "Eliminated";
   }
 
-  return player.userId === currentUserId ? "Your turn" : "Opponent";
+  return player.userId === currentUserId ? "Your turn" : "Targetable";
 }
 
 export function GameClient({ lobbyId }: GameClientProps) {

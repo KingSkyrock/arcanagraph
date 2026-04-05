@@ -405,16 +405,14 @@
   50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.18), 0 0 40px rgba(245, 158, 11, 0.06); }
 }
 
-.cvEquation :global(.katex-display) {
-  margin: 0;
-  width: 100%;
-}
-
 .cvEquation :global(.katex) {
-  font-size: clamp(0.65em, 2vw, 1.4em);
+  font-size: clamp(1em, 4vw, 1.8em);
   position: relative;
   z-index: 2;
-  white-space: nowrap;
+}
+
+.cvEquation :global(.katex-display) {
+  margin: 0;
 }
 
 .cvControls {

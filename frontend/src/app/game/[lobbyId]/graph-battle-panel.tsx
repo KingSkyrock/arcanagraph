@@ -2147,16 +2147,6 @@ export function GraphBattlePanel({
 
                 <div
                   className={styles.cvEquation}
-                  ref={(el) => {
-                    if (!el) return;
-                    // auto-scale katex to fit container
-                    const katexEl = el.querySelector('.katex') as HTMLElement | null;
-                    if (katexEl) {
-                      katexEl.style.transform = '';
-                      const ratio = el.clientWidth / katexEl.scrollWidth;
-                      if (ratio < 1) katexEl.style.transform = `scale(${ratio})`;
-                    }
-                  }}
                   dangerouslySetInnerHTML={{
                     __html:
                       equationMarkup ||
