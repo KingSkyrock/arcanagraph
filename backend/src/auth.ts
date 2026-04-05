@@ -55,3 +55,17 @@ export async function getSessionUser(request: Request) {
     return null;
   }
 }
+
+export async function getSessionUserFromSessionCookie(sessionCookie?: string | null) {
+  if (!sessionCookie) {
+    return null;
+  }
+
+  try {
+    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
+    return getUserByFirebaseUid(decoded.uid);
+  } catch (error) {
+    console.error("Failed to verify session cookie", error);
+    return null;
+  }
+}

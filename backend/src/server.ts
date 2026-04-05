@@ -2,16 +2,15 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import { createServer } from "node:http";
+import { Server as SocketIOServer } from "socket.io";
 import { config } from "./config";
 import {
   clearSessionCookie,
   createSession,
   getSessionUser,
+  getSessionUserFromSessionCookie,
   setSessionCookie,
 } from "./auth";
-<<<<<<< Updated upstream
-import { ensureDatabaseSchema, getLeaderboard, pingDatabase } from "./db";
-=======
 import {
   type AppUser,
   createLobby,
@@ -107,7 +106,6 @@ async function requireSessionUser(
 
   return user;
 }
->>>>>>> Stashed changes
 
 function createApp() {
   const app = express();
@@ -184,6 +182,38 @@ function createApp() {
     }
   });
 
+  app.post("/api/lobbies", async (request, response) => {
+    const user = await requireSessionUser(request, response);
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const lobby = await createLobby(user.id);
+      response.status(201).json({ lobby });
+    } catch (error) {
+      console.error("Failed to create lobby", error);
+      response.status(500).json({ error: "Unable to create lobby" });
+    }
+  });
+
+  app.get("/api/lobbies/:id", async (request, response) => {
+    const user = await requireSessionUser(request, response);
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const lobby = await getLobbyByIdForUser(request.params.id, user.id);
+      response.json({ lobby });
+    } catch (error) {
+      console.error("Failed to load lobby", error);
+      response.status(500).json({ error: "Unable to load lobby" });
+    }
+  });
+
   app.use(
     (
       error: Error,
@@ -199,8 +229,6 @@ function createApp() {
   return app;
 }
 
-<<<<<<< Updated upstream
-=======
 function registerLobbySockets(io: SocketIOServer) {
   io.use(async (socket, next) => {
     try {
@@ -418,7 +446,6 @@ function registerLobbySockets(io: SocketIOServer) {
   });
 }
 
->>>>>>> Stashed changes
 async function start() {
   await ensureDatabaseSchema();
   await pingDatabase();
