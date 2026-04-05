@@ -2,6 +2,8 @@ import { Pool, type PoolClient } from "pg";
 import { config } from "./config";
 import {
   MatchStateError,
+  applyDirectDamageAll,
+  applyHeal,
   applyMatchAttack,
   applyMatchAttackAll,
   clampHealth,
@@ -11,6 +13,7 @@ import {
   type MatchPlayer,
   type MatchStatus,
 } from "./match-state";
+import type { PowerupEvent } from "../../shared/powerup";
 import {
   defaultProfilePictureId,
   getProfilePictureById,
@@ -208,6 +211,7 @@ function parseLobbyMatch(value: unknown): LobbyMatch | null {
       typeof value.startedAt === "string" ? value.startedAt : new Date().toISOString(),
     endedAt: typeof value.endedAt === "string" ? value.endedAt : null,
     lastAction: parseMatchAction(value.lastAction),
+    lastPowerupEvent: isRecord(value.lastPowerupEvent) ? value.lastPowerupEvent as LobbyMatch["lastPowerupEvent"] : null,
   };
 }
 
@@ -1302,6 +1306,97 @@ export async function restartLobbyMatch(lobbyId: string, userId: string) {
         `,
         [validLobbyId, JSON.stringify(nextSettings)],
       );
+
+      return readLobby(client, validLobbyId);
+    }),
+  );
+}
+
+export async function healLobbyPlayer(
+  lobbyId: string,
+  userId: string,
+  amount: number,
+  powerupEvent: PowerupEvent,
+) {
+  const validLobbyId = requireValidLobbyId(lobbyId);
+
+  return withSchemaRetry(() =>
+    withTransaction(async (client) => {
+      await lockLobbyForUpdate(client, validLobbyId);
+      const lobby = await readLobby(client, validLobbyId);
+
+      if (lobby.state !== "in_game") {
+        throw createDatabaseError("The match is not live yet.", 409);
+      }
+
+      const match = lobby.match;
+      if (!match || match.status !== "active") {
+        throw createDatabaseError("This match has already ended.", 409);
+      }
+
+      let nextMatch: LobbyMatch;
+      try {
+        nextMatch = applyHeal(match, userId, amount, powerupEvent);
+      } catch (error) {
+        if (error instanceof MatchStateError) {
+          throw createDatabaseError(error.message, 409);
+        }
+        throw error;
+      }
+
+      const nextSettings = { ...lobby.settings, match: nextMatch };
+      await client.query(
+        "UPDATE lobbies SET settings = $2::jsonb, updated_at = NOW() WHERE id = $1",
+        [validLobbyId, JSON.stringify(nextSettings)],
+      );
+
+      return readLobby(client, validLobbyId);
+    }),
+  );
+}
+
+export async function directDamageAllLobbyPlayers(
+  lobbyId: string,
+  attackerUserId: string,
+  damage: number,
+) {
+  const validLobbyId = requireValidLobbyId(lobbyId);
+
+  return withSchemaRetry(() =>
+    withTransaction(async (client) => {
+      await lockLobbyForUpdate(client, validLobbyId);
+      const lobby = await readLobby(client, validLobbyId);
+
+      if (lobby.state !== "in_game") {
+        throw createDatabaseError("The match is not live yet.", 409);
+      }
+
+      const match = lobby.match;
+      if (!match || match.status !== "active") {
+        throw createDatabaseError("This match has already ended.", 409);
+      }
+
+      let nextMatch: LobbyMatch;
+      try {
+        nextMatch = applyDirectDamageAll(match, attackerUserId, damage);
+      } catch (error) {
+        if (error instanceof MatchStateError) {
+          throw createDatabaseError(error.message, 409);
+        }
+        throw error;
+      }
+
+      const matchFinished = nextMatch.status === "finished";
+      const nextSettings = { ...lobby.settings, match: nextMatch };
+
+      await client.query(
+        "UPDATE lobbies SET settings = $2::jsonb, updated_at = NOW() WHERE id = $1",
+        [validLobbyId, JSON.stringify(nextSettings)],
+      );
+
+      if (matchFinished) {
+        await recordCompletedMatch(client, lobby, nextMatch);
+      }
 
       return readLobby(client, validLobbyId);
     }),

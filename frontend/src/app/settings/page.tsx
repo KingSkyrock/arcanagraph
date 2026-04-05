@@ -253,8 +253,8 @@ export default function SettingsPage() {
 
           {error ? <p className={sharedStyles.error}>{error}</p> : null}
           <p className={sharedStyles.muted}>
-            Arcanagraph tracks a single hand during battle. Choose which hand
-            you draw with so the game can ignore the other one.
+            Your primary hand draws graphs. Your other hand can grab powerups
+            that appear during battle.
           </p>
         </section>
 
@@ -377,7 +377,7 @@ export default function SettingsPage() {
             <p className={sharedStyles.error}>{profilePictureError}</p>
           ) : null}
           <p className={sharedStyles.muted}>
-            Unlock gates: Elephant and Octupode start available. Red Pander opens
+            Unlock gates: Elephant and Octopus start available. Red Panda opens
             at Level 3 and Tiger opens at Level 5.
           </p>
         </section>

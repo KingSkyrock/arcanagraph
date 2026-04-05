@@ -22,6 +22,7 @@ import {
   equationConfigFromDescriptor,
   filterEquationFamilies,
   formatSkillFamilyLabel,
+  graphConfig,
   parseEquationCsv,
   scoreDrawing,
   selectRandomEquation,
@@ -338,6 +339,7 @@ export function GraphBattlePanel({
     }
 
     const trackedHand = primaryHand;
+    const nonDominantHand: HandLabel = trackedHand === "Left" ? "Right" : "Left";
 
     const overlayContext = overlayCanvas.getContext("2d")!;
     const drawingContext = drawCanvas.getContext("2d")!;
@@ -404,6 +406,41 @@ export function GraphBattlePanel({
       isBurst?: boolean;
     }> = [];
     let stream: MediaStream | null = null;
+
+    // non-dominant hand powerup collection state
+    type ActivePowerup = { id: string; type: string; mx: number; my: number; spawnedAt: number; despawnAt: number };
+    const activePowerups: ActivePowerup[] = [];
+    let nonDomHover: { powerupId: string; startTime: number } | null = null;
+    let powerupFeedback: { text: string; color: string; startTime: number } | null = null;
+    const COLLECT_HOVER_MS = 1000;
+    const POWERUP_PROXIMITY_PX = 24; // 0.4 math units * 60 pxPerUnit
+
+    // bridge socket events into the detect() closure via custom events
+    const onPowerupSpawn = (e: Event) => {
+      const pu = (e as CustomEvent).detail;
+      activePowerups.push(pu);
+    };
+    const onPowerupDespawn = (e: Event) => {
+      const id = (e as CustomEvent).detail;
+      const idx = activePowerups.findIndex((p) => p.id === id);
+      if (idx >= 0) activePowerups.splice(idx, 1);
+    };
+    const onPowerupFeedback = (e: Event) => {
+      const data = (e as CustomEvent).detail;
+      const colorMap: Record<string, string> = {
+        healing_potion: "#22cc44",
+        multiplier_spell: "#ffd700",
+        attack_spell: "#ee3333",
+      };
+      powerupFeedback = {
+        text: data.effectDescription,
+        color: colorMap[data.type] ?? "#fff",
+        startTime: performance.now(),
+      };
+    };
+    window.addEventListener("powerup:spawn", onPowerupSpawn);
+    window.addEventListener("powerup:despawn", onPowerupDespawn);
+    window.addEventListener("powerup:feedback", onPowerupFeedback);
 
     const DEBOUNCE_MS = 125;
     const TRIM_LOOKBACK_MS = 60;
@@ -1219,11 +1256,125 @@ export function GraphBattlePanel({
         overlayContext.restore();
       }
 
+      // --- render powerups on overlay ---
+      const nowMs = Date.now();
+      for (const pu of activePowerups) {
+        // mirror x for overlay canvas (CSS scaleX(-1))
+        const puGridX = graphConfig.centerX + pu.mx * graphConfig.pxPerUnit;
+        const puGridY = graphConfig.centerY - pu.my * graphConfig.pxPerUnit;
+        const puX = DRAW_WIDTH - puGridX;
+        const puY = puGridY;
+
+        // blink when < 3 seconds remaining
+        const timeLeft = pu.despawnAt - nowMs;
+        if (timeLeft < 3000 && Math.floor(nowMs / 300) % 2 === 1) continue;
+
+        // pulsing glow
+        const pulse = 0.7 + 0.3 * Math.sin(now / 300);
+        overlayContext.save();
+        overlayContext.globalAlpha = pulse;
+
+        if (pu.type === "healing_potion") {
+          // green circle + white cross
+          overlayContext.fillStyle = "#22cc44";
+          overlayContext.beginPath();
+          overlayContext.arc(puX, puY, 14, 0, Math.PI * 2);
+          overlayContext.fill();
+          overlayContext.strokeStyle = "#fff";
+          overlayContext.lineWidth = 3;
+          overlayContext.beginPath();
+          overlayContext.moveTo(puX - 6, puY); overlayContext.lineTo(puX + 6, puY);
+          overlayContext.moveTo(puX, puY - 6); overlayContext.lineTo(puX, puY + 6);
+          overlayContext.stroke();
+        } else if (pu.type === "multiplier_spell") {
+          // gold diamond
+          overlayContext.fillStyle = "#ffd700";
+          overlayContext.beginPath();
+          overlayContext.moveTo(puX, puY - 14);
+          overlayContext.lineTo(puX + 10, puY);
+          overlayContext.lineTo(puX, puY + 14);
+          overlayContext.lineTo(puX - 10, puY);
+          overlayContext.closePath();
+          overlayContext.fill();
+          overlayContext.fillStyle = "#fff";
+          overlayContext.font = "bold 11px system-ui";
+          overlayContext.textAlign = "center";
+          overlayContext.textBaseline = "middle";
+          overlayContext.fillText("×", puX, puY + 1);
+        } else {
+          // red circle + lightning
+          overlayContext.fillStyle = "#ee3333";
+          overlayContext.beginPath();
+          overlayContext.arc(puX, puY, 14, 0, Math.PI * 2);
+          overlayContext.fill();
+          overlayContext.fillStyle = "#fff";
+          overlayContext.font = "bold 16px system-ui";
+          overlayContext.textAlign = "center";
+          overlayContext.textBaseline = "middle";
+          overlayContext.fillText("⚡", puX, puY + 1);
+        }
+
+        // collection progress arc
+        if (nonDomHover && nonDomHover.powerupId === pu.id) {
+          const progress = Math.min(1, (now - nonDomHover.startTime) / COLLECT_HOVER_MS);
+          overlayContext.strokeStyle = "#fff";
+          overlayContext.lineWidth = 3;
+          overlayContext.beginPath();
+          overlayContext.arc(puX, puY, 20, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+          overlayContext.stroke();
+        }
+
+        overlayContext.restore();
+      }
+
+      // --- powerup feedback text ---
+      if (powerupFeedback) {
+        const feedbackElapsed = now - powerupFeedback.startTime;
+        if (feedbackElapsed > 1500) {
+          powerupFeedback = null;
+        } else {
+          const alpha = 1 - feedbackElapsed / 1500;
+          overlayContext.save();
+          overlayContext.scale(-1, 1);
+          overlayContext.globalAlpha = alpha;
+          overlayContext.font = "bold 36px system-ui";
+          overlayContext.fillStyle = powerupFeedback.color;
+          overlayContext.shadowColor = powerupFeedback.color;
+          overlayContext.shadowBlur = 15;
+          overlayContext.textAlign = "center";
+          overlayContext.textBaseline = "middle";
+          overlayContext.fillText(powerupFeedback.text, -320, 160);
+          overlayContext.shadowBlur = 0;
+          overlayContext.globalAlpha = 1;
+          overlayContext.restore();
+        }
+      }
+
       const handsPresent: Record<HandLabel, boolean> = { Left: false, Right: false };
 
+      let nonDominantPos: Point | null = null;
+
       if (results.landmarks) {
-        // filter out background hands: if multiple hands detected, keep only the largest
-        // hand size = 2D distance from wrist (0) to middle MCP (9)
+        // --- non-dominant hand extraction (powerup collection, fully separate from drawing) ---
+        if (activePowerups.length > 0) {
+          let bestNonDomIndex = -1;
+          let bestNonDomSize = 0;
+          for (let i = 0; i < results.landmarks.length; i += 1) {
+            const label = results.handednesses[i]?.[0]?.categoryName;
+            if (label !== nonDominantHand) continue;
+            const size = dist(results.landmarks[i]![0]!, results.landmarks[i]![9]!);
+            if (size > bestNonDomSize) { bestNonDomSize = size; bestNonDomIndex = i; }
+          }
+          if (bestNonDomIndex >= 0) {
+            const lm = results.landmarks[bestNonDomIndex]!;
+            nonDominantPos = {
+              x: lm[8]!.x * VIDEO_WIDTH - DRAW_OFFSET_X,
+              y: lm[8]!.y * VIDEO_HEIGHT - DRAW_OFFSET_Y,
+            };
+          }
+        }
+
+        // --- primary hand: filter background hands, keep only largest ---
         let bestHandIndex = -1;
         let bestHandSize = 0;
 
@@ -1433,6 +1584,38 @@ export function GraphBattlePanel({
         }
       }
 
+      // --- powerup hover detection (non-dominant hand) ---
+      if (nonDominantPos && activePowerups.length > 0) {
+        let hovering: ActivePowerup | null = null;
+        for (const pu of activePowerups) {
+          // convert powerup math coords to draw-canvas pixel coords (mirrored)
+          const puPx = DRAW_WIDTH - (graphConfig.centerX + pu.mx * graphConfig.pxPerUnit);
+          const puPy = graphConfig.centerY - pu.my * graphConfig.pxPerUnit;
+          const dx = nonDominantPos.x - puPx;
+          const dy = nonDominantPos.y - puPy;
+          if (Math.sqrt(dx * dx + dy * dy) < POWERUP_PROXIMITY_PX) {
+            hovering = pu;
+            break;
+          }
+        }
+
+        if (hovering) {
+          if (nonDomHover && nonDomHover.powerupId === hovering.id) {
+            // same powerup — check if held long enough
+            if (now - nonDomHover.startTime >= COLLECT_HOVER_MS && currentSocket) {
+              currentSocket.emit("powerup:collect", { lobbyId: currentLobbyId, powerupId: hovering.id });
+              nonDomHover = null;
+            }
+          } else {
+            nonDomHover = { powerupId: hovering.id, startTime: now };
+          }
+        } else {
+          nonDomHover = null;
+        }
+      } else {
+        nonDomHover = null;
+      }
+
       updateAndDrawParticles();
 
       if (gradeAnim && palmScored) {
@@ -1626,6 +1809,9 @@ export function GraphBattlePanel({
       }
 
       window.removeEventListener("resize", resizeAttackCanvas);
+      window.removeEventListener("powerup:spawn", onPowerupSpawn);
+      window.removeEventListener("powerup:despawn", onPowerupDespawn);
+      window.removeEventListener("powerup:feedback", onPowerupFeedback);
       handLandmarker?.close();
       gestureRecognizer?.close();
 
@@ -1731,6 +1917,36 @@ export function GraphBattlePanel({
       socket.off("game:frame", handleFrame);
     };
   }, [socket, lobbyId, solo]);
+
+  // --- powerup socket listeners ---
+  useEffect(() => {
+    if (!socket || solo) return;
+
+    const handleSpawn = (data: { powerup: { id: string; type: string; mx: number; my: number; spawnedAt: number; despawnAt: number } }) => {
+      // push into the mutable activePowerups array inside the detect() closure
+      // we use a custom event to bridge into the animation frame loop
+      window.dispatchEvent(new CustomEvent("powerup:spawn", { detail: data.powerup }));
+    };
+
+    const handleDespawn = (data: { powerupId: string }) => {
+      window.dispatchEvent(new CustomEvent("powerup:despawn", { detail: data.powerupId }));
+    };
+
+    const handleCollected = (data: { powerupId: string; userId: string; type: string; effectDescription: string }) => {
+      window.dispatchEvent(new CustomEvent("powerup:despawn", { detail: data.powerupId }));
+      window.dispatchEvent(new CustomEvent("powerup:feedback", { detail: data }));
+    };
+
+    socket.on("powerup:spawn", handleSpawn);
+    socket.on("powerup:despawn", handleDespawn);
+    socket.on("powerup:collected", handleCollected);
+
+    return () => {
+      socket.off("powerup:spawn", handleSpawn);
+      socket.off("powerup:despawn", handleDespawn);
+      socket.off("powerup:collected", handleCollected);
+    };
+  }, [socket, solo]);
 
   const selectedOpponentHealth = selectedOpponent
     ? Math.round(getHealthPercent(lobbyMatch, selectedOpponent.userId))

@@ -7,13 +7,13 @@
   },
   {
     "id": "octupode",
-    "name": "Octupode",
+    "name": "Octopus",
     "imagePath": "/images/octupode.webp",
     "unlockLevel": 1
   },
   {
     "id": "red_pander",
-    "name": "Red Pander",
+    "name": "Red Panda",
     "imagePath": "/images/red_pander.webp",
     "unlockLevel": 3
   },

@@ -277,6 +277,7 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
             curriculum: "default",
             difficulty: difficulty || "advanced",
             maxHealth: 40, // Debug: 2 hits to win. Remove for production.
+            powerupsEnabled: true,
           },
         }),
       });
@@ -374,6 +375,7 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
     try {
       const result = await emitLobbyEvent("lobby:start", {
         lobbyId: lobby.id,
+        powerupsEnabled: lobby.settings?.powerupsEnabled !== false,
       });
 
       if (!result.ok) {
@@ -487,6 +489,23 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
               </div>
             ))}
           </div>
+
+            {isHost && lobby.state === "waiting" ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px', borderRadius: 16, background: 'rgba(255,255,255,0.08)' }}>
+                <label style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={lobby.settings?.powerupsEnabled !== false}
+                    onChange={(e) => {
+                      setLobby({ ...lobby, settings: { ...lobby.settings, powerupsEnabled: e.target.checked } });
+                    }}
+                    style={{ width: 18, height: 18, accentColor: '#c4a0ff' }}
+                  />
+                  Powerups
+                </label>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>Collectible items during battle</span>
+              </div>
+            ) : null}
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <button type="button" style={ghostBtn} onClick={handleReadyToggle} disabled={busy || !currentPlayer || lobby.state !== "waiting"}>

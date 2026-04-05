@@ -1,3 +1,5 @@
+import type { PowerupEvent } from "../../shared/powerup";
+
 export type MatchStatus = "active" | "finished";
 
 export type MatchPlayer = {
@@ -23,6 +25,7 @@ export type LobbyMatch = {
   startedAt: string;
   endedAt: string | null;
   lastAction: MatchAction | null;
+  lastPowerupEvent: PowerupEvent | null;
 };
 
 export const defaultMatchHealth = 100;
@@ -78,6 +81,7 @@ export function createInitialMatch(
     startedAt,
     endedAt: null,
     lastAction: null,
+    lastPowerupEvent: null,
   };
 }
 
@@ -204,6 +208,81 @@ export function applyMatchAttackAll(
       targetUserId: "all",
       damage: totalDamage,
       score,
+      targetDefeated: defeatedCount > 0,
+      occurredAt,
+    },
+  };
+}
+
+// Heal a player. Does NOT touch lastAction — uses lastPowerupEvent instead.
+export function applyHeal(
+  match: LobbyMatch,
+  userId: string,
+  amount: number,
+  powerupEvent: PowerupEvent,
+): LobbyMatch {
+  if (match.status !== "active") {
+    throw new MatchStateError("This match has already ended.");
+  }
+
+  const playerState = match.players.find((p) => p.userId === userId);
+  if (!playerState || playerState.health <= 0) {
+    throw new MatchStateError("Player is not active in this match.");
+  }
+
+  const players = match.players.map((p) =>
+    p.userId === userId
+      ? { ...p, health: clampHealth(p.health + amount, match.maxHealth) }
+      : p,
+  );
+
+  return { ...match, players, lastPowerupEvent: powerupEvent };
+}
+
+// Deal fixed damage to all opponents (skips calculateScoreDamage).
+export function applyDirectDamageAll(
+  match: LobbyMatch,
+  attackerUserId: string,
+  fixedDamage: number,
+  options: { occurredAt?: string } = {},
+): LobbyMatch {
+  const occurredAt = options.occurredAt ?? new Date().toISOString();
+
+  if (match.status !== "active") {
+    throw new MatchStateError("This match has already ended.");
+  }
+
+  const attackerState = match.players.find((p) => p.userId === attackerUserId);
+  if (!attackerState || attackerState.health <= 0) {
+    throw new MatchStateError("You have already been eliminated from this match.");
+  }
+
+  let totalDamage = 0;
+  let defeatedCount = 0;
+  const players = match.players.map((player) => {
+    if (player.userId === attackerUserId || player.health <= 0) {
+      return player;
+    }
+    const nextHealth = clampHealth(player.health - fixedDamage, match.maxHealth);
+    totalDamage += player.health - nextHealth;
+    if (nextHealth === 0) defeatedCount += 1;
+    return { ...player, health: nextHealth };
+  });
+
+  const alivePlayers = players.filter((p) => p.health > 0);
+  const finished = alivePlayers.length <= 1;
+
+  return {
+    ...match,
+    status: finished ? "finished" : "active",
+    winnerUserId: finished ? alivePlayers[0]?.userId ?? null : null,
+    players,
+    endedAt: finished ? occurredAt : null,
+    lastAction: {
+      attackerUserId,
+      targetUserId: "all",
+      damage: totalDamage,
+      score: null,
       targetDefeated: defeatedCount > 0,
       occurredAt,
     },

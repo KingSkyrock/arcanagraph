@@ -29,6 +29,7 @@ import {
   getSessionUserFromSessionCookie,
   setSessionCookie,
 } from "./auth";
+import { startPowerupLoop, stopPowerupLoop, collectPowerup, getAndClearMultiplier } from "./powerup-state";
 import {
   attackAllLobbyPlayers,
   type AppUser,
@@ -53,6 +54,8 @@ type SocketPayload = {
   ready?: boolean;
   targetUserId?: string;
   trails?: unknown;
+  powerupId?: string;
+  powerupsEnabled?: boolean;
 };
 
 function getStatusCode(error: unknown) {
@@ -500,15 +503,18 @@ function registerLobbySockets(io: SocketIOServer) {
           advancePlayer(lobbyId, user.id);
 
           const result = scoreDrawing(trails, equationConfig);
+          const multiplier = getAndClearMultiplier(lobbyId, user.id);
+          const adjustedScore = Math.min(100, result.total * multiplier);
           const lobby = await attackAllLobbyPlayers(
             lobbyId,
             user.id,
-            result.total,
+            adjustedScore,
           );
 
           io.to(`lobby:${lobby.id}`).emit("lobby:update", { lobby });
 
           if (lobby.match?.status === "finished") {
+            stopPowerupLoop(lobby.id);
             clearLobby(lobby.id);
             io.to(`lobby:${lobby.id}`).emit("game:over", {
               lobbyId: lobby.id,
@@ -523,6 +529,39 @@ function registerLobbySockets(io: SocketIOServer) {
               score: { total: result.total, shape: result.shape, position: result.position },
             },
           });
+        } catch (error) {
+          emitFailure(ack, error);
+        }
+      },
+    );
+
+    socket.on(
+      "powerup:collect",
+      async (
+        payload: SocketPayload,
+        ack?: (result: SocketResult<Record<string, never>>) => void,
+      ) => {
+        try {
+          const lobbyId = requireLobbyId(payload.lobbyId);
+          const powerupId = payload.powerupId ?? "";
+          if (!powerupId) throw new Error("Missing powerupId");
+
+          const result = await collectPowerup(lobbyId, user.id, powerupId, io);
+          if (!result) {
+            throw new Error("Powerup is no longer available.");
+          }
+
+          // check if attack spell ended the match
+          if (result.lobby?.match?.status === "finished") {
+            stopPowerupLoop(lobbyId);
+            clearLobby(lobbyId);
+            io.to(`lobby:${lobbyId}`).emit("game:over", {
+              lobbyId,
+              winnerUserId: result.lobby.match.winnerUserId,
+            });
+          }
+
+          ack?.({ ok: true, data: {} });
         } catch (error) {
           emitFailure(ack, error);
         }
@@ -563,6 +602,12 @@ function registerLobbySockets(io: SocketIOServer) {
             ? lobby.settings.difficulty
             : undefined;
           initLobbySequence(lobby.id, difficulty);
+          // start powerup loop if enabled (prefer payload, fallback to lobby settings)
+          const powerupsEnabled = payload.powerupsEnabled ?? lobby.settings.powerupsEnabled !== false;
+          if (powerupsEnabled) {
+            const playerIds = lobby.players.map((p: { userId: string }) => p.userId);
+            startPowerupLoop(lobby.id, playerIds, io);
+          }
           io.to(`lobby:${lobby.id}`).emit("game:starting", { lobbyId: lobby.id });
           io.to(`lobby:${lobby.id}`).emit("lobby:update", { lobby });
           io.to(`lobby:${lobby.id}`).emit("game:started", {
