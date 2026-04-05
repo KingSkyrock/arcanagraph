@@ -123,7 +123,8 @@ function sampleParam(ranges: ParamRange[], depth = 0): number {
   const index = Math.floor(Math.random() * (steps + 1));
   const value = range.min + index * range.step;
 
-  if (value === 0 && Math.random() > 0.2 && depth < 10) {
+  // Avoid 0 — retry almost always (95%) to prevent degenerate equations
+  if (value === 0 && depth < 10) {
     return sampleParam(ranges, depth + 1);
   }
 
@@ -153,13 +154,19 @@ function buildEquationParts(family: EquationFamily) {
     label = label.replaceAll(`{${key}}`, String(value));
   }
 
-  label = label.replace(/(?<![0-9.])1(x|sin|cos|√|∣|\|)/g, "$1");
-  label = label.replace(/(?<![0-9.])-1(x|sin|cos|√|∣|\|)/g, "-$1");
+  // Strip coefficient of 1 before variables and parentheses: 1x → x, 1( → (, 1sin → sin
+  label = label.replace(/(?<![0-9.])1(x|sin|cos|√|∣|\||\()/g, "$1");
+  // Strip coefficient of -1: -1x → -x, -1( → -(
+  label = label.replace(/(?<![0-9.])-1(x|sin|cos|√|∣|\||\()/g, "-$1");
+  // Fix double negatives: (x - -3) → (x + 3), + -3 → - 3
+  label = label.replace(/- -/g, "+ ");
   label = label.replace(/\+ -/g, "- ");
+  // Fix leading "y = -(" display — no extra cleanup needed
 
   let latex = label;
   latex = latex.replace(/²/g, "^{2}");
   latex = latex.replace(/³/g, "^{3}");
+  latex = latex.replace(/⁴/g, "^{4}");
   latex = latex.replace(/√\(([^)]+)\)/g, "\\sqrt{$1}");
   latex = latex.replace(/√/g, "\\sqrt");
   latex = latex.replace(/\|([^|]+)\|/g, "\\left|$1\\right|");
@@ -350,8 +357,9 @@ export function filterByCategory(families: EquationFamily[], category?: string):
   if (category === "advanced") {
     return families; // all equations
   }
-  // Treat as a skill_family name (custom)
-  return families.filter(f => f.skill_family === category);
+  // Treat as skill_family name(s) — supports comma-separated for multi-select
+  const selected = category.split(',').map(s => s.trim()).filter(Boolean);
+  return families.filter(f => selected.includes(f.skill_family));
 }
 
 export function selectRandomEquation(families: EquationFamily[], difficulty?: string) {

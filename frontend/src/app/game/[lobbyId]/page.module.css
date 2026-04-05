@@ -381,8 +381,8 @@
 }
 
 .cvEquation {
-  padding: 12px 24px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  padding: 12px 16px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: 18px;
   background: rgba(11, 31, 92, 0.6);
   color: #e0e0e0;
@@ -391,10 +391,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  animation: equation-float 3s ease-in-out infinite, equation-glow 3s ease-in-out infinite;
+}
+
+@keyframes equation-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes equation-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(245, 158, 11, 0.08); }
+  50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.18), 0 0 40px rgba(245, 158, 11, 0.06); }
 }
 
 .cvEquation :global(.katex) {
-  font-size: 1.8em;
+  font-size: clamp(1em, 4vw, 1.8em);
+  position: relative;
+  z-index: 2;
 }
 
 .cvEquation :global(.katex-display) {

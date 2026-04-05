@@ -113,6 +113,40 @@ function getHealthPercent(match: LobbyMatch | null, userId: string) {
   return Math.max(0, Math.min(100, (player.health / match.maxHealth) * 100));
 }
 
+function SkillFamilyBadge({ skillFamily }: { skillFamily: string }) {
+  const [hovered, setHovered] = useState(false);
+  const isMulti = skillFamily.includes(',');
+  const label = isMulti ? 'Custom' : formatSkillFamilyLabel(skillFamily);
+  const tooltip = isMulti
+    ? skillFamily.split(',').map(s => formatSkillFamilyLabel(s.trim())).join(', ')
+    : undefined;
+
+  return (
+    <span
+      className={styles.state}
+      style={{ position: 'relative', cursor: tooltip ? 'help' : 'default' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {label}
+      {tooltip && hovered ? (
+        <span style={{
+          position: 'absolute', bottom: 'calc(100% + 8px)',
+          left: '50%', transform: 'translateX(-50%)',
+          width: 220, padding: '10px 14px', borderRadius: 12,
+          background: 'rgba(10, 24, 71, 0.95)',
+          border: '1px solid rgba(255,255,255,0.18)',
+          color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: 600,
+          lineHeight: 1.5, pointerEvents: 'none', zIndex: 10,
+          textAlign: 'center', whiteSpace: 'normal',
+        }}>
+          {tooltip}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function GraphBattlePanel({
   currentPlayer,
   lobbyMatch,
@@ -627,7 +661,7 @@ export function GraphBattlePanel({
       if (!filteredFamilies.length) {
         setLocalError(
           soloSkillFamilyRef.current
-            ? `No graph equations are available for ${formatSkillFamilyLabel(soloSkillFamilyRef.current)} yet.`
+            ? `No equations available for ${soloSkillFamilyRef.current.includes(',') ? 'the selected families' : formatSkillFamilyLabel(soloSkillFamilyRef.current)}.`
             : "No equations available for this difficulty.",
         );
         return;
@@ -994,7 +1028,8 @@ export function GraphBattlePanel({
         }
       }
 
-      if (shapeDebugData) {
+      // shape debug overlay (cyan/magenta) — solo mode only
+      if (shapeDebugData && soloRef.current) {
         drawingContext.strokeStyle = "rgba(0, 255, 255, 0.7)";
         drawingContext.lineWidth = 2;
         drawingContext.beginPath();
@@ -1021,45 +1056,23 @@ export function GraphBattlePanel({
     }
 
     function drawHand(landmarks: NormalizedLandmark[], isRight: boolean, drawing: boolean) {
-      overlayContext.strokeStyle = "#c4a0ff";
-      overlayContext.lineWidth = 2;
+      // only draw the index finger tip circle — no skeleton
+      const tip = landmarks[8];
+      if (!tip) return;
 
-      for (const [start, end] of HAND_CONNECTIONS) {
-        const startPoint = landmarks[start];
-        const endPoint = landmarks[end];
+      const x = tip.x * VIDEO_WIDTH - DRAW_OFFSET_X;
+      const y = tip.y * VIDEO_HEIGHT - DRAW_OFFSET_Y;
 
-        if (!startPoint || !endPoint) {
-          continue;
-        }
-
-        overlayContext.beginPath();
-        overlayContext.moveTo(startPoint.x * VIDEO_WIDTH - DRAW_OFFSET_X, startPoint.y * VIDEO_HEIGHT - DRAW_OFFSET_Y);
-        overlayContext.lineTo(endPoint.x * VIDEO_WIDTH - DRAW_OFFSET_X, endPoint.y * VIDEO_HEIGHT - DRAW_OFFSET_Y);
-        overlayContext.stroke();
-      }
-
-      for (let index = 0; index < landmarks.length; index += 1) {
-        const landmark = landmarks[index]!;
-        const x = landmark.x * VIDEO_WIDTH - DRAW_OFFSET_X;
-        const y = landmark.y * VIDEO_HEIGHT - DRAW_OFFSET_Y;
-
-        if (index === 8) {
-          overlayContext.fillStyle = isRight
-            ? drawing
-              ? "#ffd700"
-              : "#ff3333"
-            : drawing
-              ? "#33ff33"
-              : "#3388ff";
-          overlayContext.beginPath();
-          overlayContext.arc(x, y, 8, 0, Math.PI * 2);
-          overlayContext.fill();
-        } else {
-          overlayContext.fillStyle = "#c4a0ff";
-          overlayContext.beginPath();
-          overlayContext.arc(x, y, 4, 0, Math.PI * 2);
-          overlayContext.fill();
-        }
+      overlayContext.fillStyle = isRight
+        ? drawing
+          ? "#ffd700"
+          : "#ff3333"
+        : drawing
+          ? "#33ff33"
+          : "#3388ff";
+      overlayContext.beginPath();
+      overlayContext.arc(x, y, 8, 0, Math.PI * 2);
+      overlayContext.fill();
       }
     }
 
@@ -2005,9 +2018,7 @@ export function GraphBattlePanel({
             </span>
           ) : null}
           {solo && soloSkillFamily ? (
-            <span className={styles.state}>
-              {formatSkillFamilyLabel(soloSkillFamily)}
-            </span>
+            <SkillFamilyBadge skillFamily={soloSkillFamily} />
           ) : null}
           {cameraBlocked ? (
             <button

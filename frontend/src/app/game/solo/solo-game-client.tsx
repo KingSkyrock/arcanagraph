@@ -50,7 +50,7 @@ export function SoloGameClient() {
   const selectedSkillFamily = searchParams.get("skillFamily");
   const selectedCategory = searchParams.get("category") as "beginner" | "advanced" | null;
   const selectedSkillFamilyLabel = selectedSkillFamily
-    ? formatSkillFamilyLabel(selectedSkillFamily)
+    ? selectedSkillFamily.split(',').map(s => formatSkillFamilyLabel(s.trim())).join(', ')
     : null;
 
   useEffect(() => {

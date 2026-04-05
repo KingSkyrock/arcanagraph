@@ -52,6 +52,7 @@ export default function PlayPage() {
   const [customError, setCustomError] = useState('');
   const [difficulty, setDifficulty] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState('');
+  const [selectedFamilies, setSelectedFamilies] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   useEffect(() => {
@@ -423,60 +424,77 @@ export default function PlayPage() {
               lineHeight: 1.6,
               marginBottom: 28,
             }}>
-              {mode === 'battle'
-                ? 'Choose a skill family for your lobby. Both players will get equations from this category.'
-                : 'Custom practice will only pull equations from the skill family you choose here.'}
+              Select the equation families you want to practice. You can pick multiple.
             </p>
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: 18,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: 12,
               width: 'min(100%, 760px)',
             }}>
-              {customSkillFamilies.map((family, index) => {
-                const palette = [
-                  ['rgb(34, 197, 94)', 'rgb(21, 128, 61)', 'rgb(22, 163, 74)'],
-                  ['rgb(245, 158, 11)', 'rgb(180, 83, 9)', 'rgb(217, 119, 6)'],
-                  ['rgb(239, 104, 104)', 'rgb(185, 28, 28)', 'rgb(220, 38, 38)'],
-                  ['rgb(162, 28, 175)', 'rgb(112, 26, 117)', 'rgb(134, 25, 143)'],
-                ] as const;
-                const [bg, shadow, hoverBg] = palette[index % palette.length] ?? palette[0];
+              {customSkillFamilies.map((family) => {
+                const isSelected = selectedFamilies.has(family.id);
 
                 return (
                   <button
                     key={family.id}
-                    style={{
-                      ...getLegoStyle(bg, shadow, true),
-                      flexDirection: 'column',
-                      minHeight: 118,
-                      padding: '22px 24px',
-                    }}
-                    onMouseEnter={e => handleMouseEnter(e, shadow, true, hoverBg)}
-                    onMouseLeave={e => handleMouseLeave(e, bg, shadow, true)}
-                    onMouseDown={e => handleMouseDown(e, shadow)}
-                    onMouseUp={e => handleMouseEnter(e, shadow, true, hoverBg)}
                     onClick={() => {
-                      if (mode === 'battle') {
-                        setDifficulty(family.id);
-                        setStep('lobby');
-                      } else {
-                        goToSolo({ skillFamily: family.id });
-                      }
+                      setSelectedFamilies(prev => {
+                        const next = new Set(prev);
+                        if (next.has(family.id)) next.delete(family.id);
+                        else next.add(family.id);
+                        return next;
+                      });
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '16px 20px',
+                      borderRadius: 16,
+                      border: isSelected ? '2px solid #f59e0b' : '2px solid rgba(255,255,255,0.18)',
+                      background: isSelected ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255,255,255,0.08)',
+                      color: '#fff',
+                      fontWeight: 700,
+                      fontSize: 16,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
                     }}
                   >
-                    <span>{family.label}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, opacity: 0.84 }}>
-                      {family.count} templates
-                    </span>
+                    {family.label}
                   </button>
                 );
               })}
             </div>
 
             <button
-              onClick={() => setStep('type')}
-              style={{ marginTop: 40, background: 'none', border: 'none', color: 'rgb(255, 255, 255)', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline' }}
+              style={{
+                ...getLegoStyle('rgb(34, 197, 94)', 'rgb(21, 128, 61)', true),
+                marginTop: 24,
+                opacity: selectedFamilies.size === 0 ? 0.5 : 1,
+                pointerEvents: selectedFamilies.size === 0 ? 'none' as const : 'auto' as const,
+              }}
+              onMouseEnter={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
+              onMouseLeave={e => handleMouseLeave(e, 'rgb(34, 197, 94)', 'rgb(21, 128, 61)', true)}
+              onMouseDown={e => handleMouseDown(e, 'rgb(21, 128, 61)')}
+              disabled={selectedFamilies.size === 0}
+              onClick={() => {
+                const families = [...selectedFamilies].join(',');
+                if (mode === 'battle') {
+                  setDifficulty(families);
+                  setStep('lobby');
+                } else {
+                  goToSolo({ skillFamily: families });
+                }
+              }}
+            >
+              Start with {selectedFamilies.size} {selectedFamilies.size === 1 ? 'family' : 'families'}
+            </button>
+
+            <button
+              onClick={() => { setStep('type'); setSelectedFamilies(new Set()); }}
+              style={{ marginTop: 20, background: 'none', border: 'none', color: 'rgb(255, 255, 255)', cursor: 'pointer', fontWeight: 700, textDecoration: 'underline' }}
             >
               Back to Difficulty Selection
             </button>

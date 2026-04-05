@@ -37,6 +37,34 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   custom: "Custom",
 };
 
+function DifficultyPill({ label, tooltip, style }: { label: string; tooltip?: string; style: React.CSSProperties }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <span
+      style={{ ...style, position: 'relative', cursor: tooltip ? 'help' : 'default' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {label}
+      {tooltip && hovered ? (
+        <span style={{
+          position: 'absolute', bottom: 'calc(100% + 8px)',
+          left: '50%', transform: 'translateX(-50%)',
+          width: 220, padding: '10px 14px', borderRadius: 12,
+          background: 'rgba(10, 24, 71, 0.95)',
+          border: '1px solid rgba(255,255,255,0.18)',
+          color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: 600,
+          lineHeight: 1.5, pointerEvents: 'none', zIndex: 10,
+          textAlign: 'center', whiteSpace: 'normal',
+        }}>
+          {tooltip}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 type PlayClientProps = {
   autoCreateWithDifficulty?: string | null;
   joinInviteCode?: string;
@@ -444,7 +472,13 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
   }
 
   const lobbyDifficulty = lobby?.settings?.difficulty as string | undefined;
-  const difficultyLabel = lobbyDifficulty ? (DIFFICULTY_LABELS[lobbyDifficulty] || lobbyDifficulty) : "Default";
+  const isCustomDifficulty = lobbyDifficulty ? lobbyDifficulty.includes(',') || !DIFFICULTY_LABELS[lobbyDifficulty] : false;
+  const customFamilyNames = isCustomDifficulty && lobbyDifficulty
+    ? lobbyDifficulty.split(',').map(s => s.trim().split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')
+    : '';
+  const difficultyLabel = lobbyDifficulty
+    ? DIFFICULTY_LABELS[lobbyDifficulty] || (isCustomDifficulty ? 'Custom' : lobbyDifficulty)
+    : "Default";
 
   return (
     <div style={panelStyle}>
@@ -454,7 +488,9 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
           <h2 style={headingStyle}>{lobby ? lobby.inviteCode : "Setting up..."}</h2>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {lobby ? <span style={pillStyle}>{difficultyLabel}</span> : null}
+          {lobby ? (
+            <DifficultyPill label={difficultyLabel} tooltip={isCustomDifficulty ? customFamilyNames : undefined} style={pillStyle} />
+          ) : null}
           <span style={pillStyle}>{socketConnected ? "Connected" : "Connecting..."}</span>
         </div>
       </div>
