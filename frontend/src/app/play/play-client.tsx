@@ -70,6 +70,17 @@ export function PlayClient() {
 
     socket.on("disconnect", () => {
       setSocketConnected(false);
+      setStatus("Socket offline. Reconnecting to lobby updates...");
+    });
+
+    socket.on("connect_error", (connectError) => {
+      console.error(connectError);
+      setSocketConnected(false);
+      setError(
+        connectError.message
+          ? `Unable to connect to the lobby server: ${connectError.message}`
+          : "Unable to connect to the lobby server.",
+      );
     });
 
     socket.on("lobby:update", ({ lobby: nextLobby }: { lobby: Lobby }) => {
@@ -126,6 +137,16 @@ export function PlayClient() {
     void emitLobbyEvent("lobby:join", { lobbyId: activeLobbyId });
   }, [activeLobbyId, socketConnected, user]);
 
+  useEffect(() => {
+    if (!lobby || !activeLobbyId) {
+      return;
+    }
+
+    if (lobby.id === activeLobbyId && lobby.state === "in_game" && lobby.match) {
+      router.push(`/game/${lobby.id}`);
+    }
+  }, [activeLobbyId, lobby, router]);
+
   async function loadSession() {
     try {
       const response = await fetch(apiUrl("/api/auth/me"), {
@@ -149,6 +170,9 @@ export function PlayClient() {
     } catch (loadError) {
       console.error(loadError);
       setStatus("Backend unavailable. Start the frontend, backend, and Postgres first.");
+      setError(
+        loadError instanceof Error ? loadError.message : "Could not verify your player session.",
+      );
     }
   }
 
@@ -167,6 +191,7 @@ export function PlayClient() {
       setStatus(`Lobby ${payload.lobby.inviteCode} loaded.`);
     } catch (loadError) {
       console.error(loadError);
+      setLobby(null);
       setError(
         loadError instanceof Error ? loadError.message : "Could not load lobby.",
       );
@@ -229,6 +254,11 @@ export function PlayClient() {
   }
 
   async function handleJoinLobby() {
+    if (!socketConnected) {
+      setError("Waiting for the realtime lobby connection. Try joining again in a moment.");
+      return;
+    }
+
     setBusy(true);
     setError("");
 
@@ -359,7 +389,11 @@ export function PlayClient() {
               placeholder="Invite code"
               maxLength={6}
             />
-            <button type="button" onClick={handleJoinLobby} disabled={busy || !inviteCode.trim()}>
+            <button
+              type="button"
+              onClick={handleJoinLobby}
+              disabled={busy || !socketConnected || !inviteCode.trim()}
+            >
               Join
             </button>
           </div>

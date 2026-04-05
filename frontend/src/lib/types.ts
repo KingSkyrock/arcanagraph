@@ -11,6 +11,9 @@ export type AppUser = {
   gamesPlayed: number;
 };
 
+export type LobbyState = "waiting" | "starting" | "in_game";
+export type MatchStatus = "active" | "finished";
+
 export type LobbyPlayer = {
   userId: string;
   firebaseUid: string;
@@ -27,12 +30,37 @@ export type LobbyPlayer = {
   joinedAt: string;
 };
 
+export type MatchPlayer = {
+  userId: string;
+  health: number;
+};
+
+export type MatchAction = {
+  attackerUserId: string;
+  targetUserId: string;
+  damage: number;
+  targetDefeated: boolean;
+  occurredAt: string;
+};
+
+export type LobbyMatch = {
+  maxHealth: number;
+  damagePerAttack: number;
+  status: MatchStatus;
+  winnerUserId: string | null;
+  players: MatchPlayer[];
+  startedAt: string;
+  endedAt: string | null;
+  lastAction: MatchAction | null;
+};
+
 export type Lobby = {
   id: string;
   inviteCode: string;
   hostUserId: string;
-  state: "waiting" | "starting" | "in_game";
+  state: LobbyState;
   settings: Record<string, unknown>;
+  match: LobbyMatch | null;
   players: LobbyPlayer[];
   createdAt: string;
   updatedAt: string;

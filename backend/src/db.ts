@@ -1,5 +1,15 @@
 import { Pool, type PoolClient } from "pg";
 import { config } from "./config";
+import {
+  MatchStateError,
+  applyMatchAttack,
+  clampHealth,
+  createInitialMatch,
+  type LobbyMatch,
+  type MatchAction,
+  type MatchPlayer,
+  type MatchStatus,
+} from "./match-state";
 
 const pool = new Pool({
   connectionString: config.databaseUrl,
@@ -47,6 +57,7 @@ export type Lobby = {
   hostUserId: string;
   state: LobbyState;
   settings: Record<string, unknown>;
+  match: LobbyMatch | null;
   players: LobbyPlayer[];
   createdAt: string;
   updatedAt: string;
@@ -58,12 +69,29 @@ type UpsertUserInput = {
   displayName: string | null;
 };
 
+export type { LobbyMatch, MatchAction, MatchPlayer, MatchStatus };
+
 type DatabaseError = Error & { statusCode?: number };
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function createDatabaseError(message: string, statusCode: number) {
   const error = new Error(message) as DatabaseError;
   error.statusCode = statusCode;
   return error;
+}
+
+function requireValidLobbyId(lobbyId: string) {
+  const normalizedLobbyId = lobbyId.trim();
+
+  if (!uuidPattern.test(normalizedLobbyId)) {
+    throw createDatabaseError(
+      "Lobby id is invalid. Check the lobby link or invite and try again.",
+      400,
+    );
+  }
+
+  return normalizedLobbyId;
 }
 
 function generateInviteCode() {
@@ -75,6 +103,93 @@ function generateInviteCode() {
 
 function normalizeInviteCode(inviteCode: string) {
   return inviteCode.trim().toUpperCase();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseMatchAction(value: unknown): MatchAction | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  if (
+    typeof value.attackerUserId !== "string" ||
+    typeof value.targetUserId !== "string" ||
+    typeof value.occurredAt !== "string"
+  ) {
+    return null;
+  }
+
+  const damage = Number(value.damage);
+
+  if (!Number.isFinite(damage) || damage <= 0) {
+    return null;
+  }
+
+  return {
+    attackerUserId: value.attackerUserId,
+    targetUserId: value.targetUserId,
+    damage: Math.round(damage),
+    targetDefeated: Boolean(value.targetDefeated),
+    occurredAt: value.occurredAt,
+  };
+}
+
+function parseMatchPlayer(value: unknown, maxHealth: number): MatchPlayer | null {
+  if (!isRecord(value) || typeof value.userId !== "string") {
+    return null;
+  }
+
+  const health = Number(value.health);
+
+  if (!Number.isFinite(health)) {
+    return null;
+  }
+
+  return {
+    userId: value.userId,
+    health: clampHealth(health, maxHealth),
+  };
+}
+
+function parseLobbyMatch(value: unknown): LobbyMatch | null {
+  if (!isRecord(value) || !Array.isArray(value.players)) {
+    return null;
+  }
+
+  const maxHealth = Number(value.maxHealth);
+  const damagePerAttack = Number(value.damagePerAttack);
+
+  if (!Number.isFinite(maxHealth) || maxHealth <= 0) {
+    return null;
+  }
+
+  if (!Number.isFinite(damagePerAttack) || damagePerAttack <= 0) {
+    return null;
+  }
+
+  const status = value.status === "finished" ? "finished" : "active";
+  const players = value.players
+    .map((player) => parseMatchPlayer(player, maxHealth))
+    .filter((player): player is MatchPlayer => Boolean(player));
+
+  if (!players.length) {
+    return null;
+  }
+
+  return {
+    maxHealth: Math.round(maxHealth),
+    damagePerAttack: Math.round(damagePerAttack),
+    status,
+    winnerUserId: typeof value.winnerUserId === "string" ? value.winnerUserId : null,
+    players,
+    startedAt:
+      typeof value.startedAt === "string" ? value.startedAt : new Date().toISOString(),
+    endedAt: typeof value.endedAt === "string" ? value.endedAt : null,
+    lastAction: parseMatchAction(value.lastAction),
+  };
 }
 
 export function getClassNameForLevel(level: number) {
@@ -153,10 +268,10 @@ function mapLobby(rows: Array<Record<string, unknown>>) {
   const players = rows
     .filter((row) => row.player_user_id !== null)
     .map(mapLobbyPlayer);
-  const settings =
-    firstRow.settings && typeof firstRow.settings === "object"
-      ? (firstRow.settings as Record<string, unknown>)
-      : {};
+  const settings = isRecord(firstRow.settings)
+    ? (firstRow.settings as Record<string, unknown>)
+    : {};
+  const match = parseLobbyMatch(settings.match);
 
   return {
     id: String(firstRow.id),
@@ -164,6 +279,7 @@ function mapLobby(rows: Array<Record<string, unknown>>) {
     hostUserId: String(firstRow.host_user_id),
     state: String(firstRow.state) as LobbyState,
     settings,
+    match,
     players,
     createdAt: new Date(String(firstRow.created_at)).toISOString(),
     updatedAt: new Date(String(firstRow.updated_at)).toISOString(),
@@ -234,6 +350,19 @@ async function requireLobbyMembership(
   lobbyId: string,
   userId: string,
 ) {
+  const lobbyResult = await client.query(
+    `
+      SELECT 1
+      FROM lobbies
+      WHERE id = $1
+    `,
+    [lobbyId],
+  );
+
+  if (!lobbyResult.rows[0]) {
+    throw createDatabaseError("Lobby not found.", 404);
+  }
+
   const result = await client.query(
     `
       SELECT 1
@@ -257,6 +386,61 @@ async function readLobby(client: Pool | PoolClient, lobbyId: string) {
   }
 
   return lobby;
+}
+
+async function lockLobbyForUpdate(client: PoolClient, lobbyId: string) {
+  const result = await client.query(
+    `
+      SELECT 1
+      FROM lobbies
+      WHERE id = $1
+      FOR UPDATE
+    `,
+    [lobbyId],
+  );
+
+  if (!result.rows[0]) {
+    throw createDatabaseError("Lobby not found.", 404);
+  }
+}
+
+async function recordCompletedMatch(
+  client: PoolClient,
+  lobby: Lobby,
+  match: LobbyMatch,
+) {
+  await client.query(
+    `
+      INSERT INTO match_history (lobby_id, winner_user_id, result)
+      VALUES ($1, $2, $3::jsonb)
+    `,
+    [
+      lobby.id,
+      match.winnerUserId,
+      JSON.stringify({
+        status: match.status,
+        startedAt: match.startedAt,
+        endedAt: match.endedAt,
+        maxHealth: match.maxHealth,
+        damagePerAttack: match.damagePerAttack,
+        players: match.players,
+        lastAction: match.lastAction,
+      }),
+    ],
+  );
+
+  await client.query(
+    `
+      UPDATE users
+      SET
+        wins = wins + CASE WHEN $2::uuid IS NOT NULL AND id = $2::uuid THEN 1 ELSE 0 END,
+        losses = losses + CASE WHEN $2::uuid IS NOT NULL AND id <> $2::uuid THEN 1 ELSE 0 END,
+        games_played = games_played + 1,
+        updated_at = NOW()
+      WHERE id = ANY($1::uuid[])
+    `,
+    [lobby.players.map((player) => player.userId), match.winnerUserId],
+  );
 }
 
 async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>) {
@@ -467,8 +651,9 @@ export async function createLobby(
 
 export async function getLobbyByIdForUser(lobbyId: string, userId: string) {
   return withSchemaRetry(async () => {
-    await requireLobbyMembership(pool, lobbyId, userId);
-    return readLobby(pool, lobbyId);
+    const validLobbyId = requireValidLobbyId(lobbyId);
+    await requireLobbyMembership(pool, validLobbyId, userId);
+    return readLobby(pool, validLobbyId);
   });
 }
 
@@ -528,8 +713,9 @@ export async function joinLobbyByInviteCode(inviteCode: string, userId: string) 
 
 export async function joinLobbyById(lobbyId: string, userId: string) {
   return withSchemaRetry(async () => {
-    await requireLobbyMembership(pool, lobbyId, userId);
-    return readLobby(pool, lobbyId);
+    const validLobbyId = requireValidLobbyId(lobbyId);
+    await requireLobbyMembership(pool, validLobbyId, userId);
+    return readLobby(pool, validLobbyId);
   });
 }
 
@@ -538,6 +724,8 @@ export async function updateLobbyPlayerReady(
   userId: string,
   ready: boolean,
 ) {
+  const validLobbyId = requireValidLobbyId(lobbyId);
+
   await withSchemaRetry(() =>
     withTransaction(async (client) => {
       const lobbyResult = await client.query(
@@ -547,7 +735,7 @@ export async function updateLobbyPlayerReady(
           WHERE id = $1
           FOR UPDATE
         `,
-        [lobbyId],
+        [validLobbyId],
       );
 
       const lobbyRow = lobbyResult.rows[0] as { state: LobbyState } | undefined;
@@ -566,7 +754,7 @@ export async function updateLobbyPlayerReady(
           SET ready = $3
           WHERE lobby_id = $1 AND user_id = $2
         `,
-        [lobbyId, userId, ready],
+        [validLobbyId, userId, ready],
       );
 
       if (!updateResult.rowCount) {
@@ -575,11 +763,13 @@ export async function updateLobbyPlayerReady(
     }),
   );
 
-  return readLobby(pool, lobbyId);
+  return readLobby(pool, validLobbyId);
 }
 
 export async function startLobbyGame(lobbyId: string, hostUserId: string) {
-  await withSchemaRetry(() =>
+  const validLobbyId = requireValidLobbyId(lobbyId);
+
+  return withSchemaRetry(() =>
     withTransaction(async (client) => {
       const lobbyResult = await client.query(
         `
@@ -588,7 +778,7 @@ export async function startLobbyGame(lobbyId: string, hostUserId: string) {
           WHERE id = $1
           FOR UPDATE
         `,
-        [lobbyId],
+        [validLobbyId],
       );
 
       const lobbyRow = lobbyResult.rows[0] as
@@ -613,11 +803,15 @@ export async function startLobbyGame(lobbyId: string, hostUserId: string) {
           FROM lobby_players
           WHERE lobby_id = $1
         `,
-        [lobbyId],
+        [validLobbyId],
       );
 
       if (!playerResult.rows.length) {
         throw createDatabaseError("The lobby has no players.", 400);
+      }
+
+      if (playerResult.rows.length < 2) {
+        throw createDatabaseError("At least two players are required to start a match.", 409);
       }
 
       const notReady = playerResult.rows.some(
@@ -628,36 +822,202 @@ export async function startLobbyGame(lobbyId: string, hostUserId: string) {
         throw createDatabaseError("All players must be ready before starting.", 409);
       }
 
+      const lobby = await readLobby(client, validLobbyId);
+      const nextSettings = {
+        ...lobby.settings,
+        match: createInitialMatch(lobby.players.map((player) => player.userId)),
+      };
+
       await client.query(
         `
           UPDATE lobbies
-          SET state = 'starting', updated_at = NOW()
+          SET state = 'in_game', settings = $2::jsonb, updated_at = NOW()
           WHERE id = $1
         `,
-        [lobbyId],
+        [validLobbyId, JSON.stringify(nextSettings)],
       );
+
+      return readLobby(client, validLobbyId);
     }),
   );
-
-  return readLobby(pool, lobbyId);
 }
 
 export async function markLobbyInGame(lobbyId: string) {
-  const result = await withSchemaRetry(() =>
-    pool.query(
-      `
-        UPDATE lobbies
-        SET state = 'in_game', updated_at = NOW()
-        WHERE id = $1
-        RETURNING id
-      `,
-      [lobbyId],
-    ),
-  );
+  const validLobbyId = requireValidLobbyId(lobbyId);
+  return withSchemaRetry(() =>
+    withTransaction(async (client) => {
+      await lockLobbyForUpdate(client, validLobbyId);
+      const lobby = await readLobby(client, validLobbyId);
 
-  if (!result.rows[0]) {
-    throw createDatabaseError("Lobby not found.", 404);
+      if (lobby.state !== "starting") {
+        throw createDatabaseError("Lobby is not ready to enter a match yet.", 409);
+      }
+
+      if (lobby.players.length < 2) {
+        throw createDatabaseError("At least two players are required to enter a match.", 409);
+      }
+
+      const nextSettings = {
+        ...lobby.settings,
+        match: createInitialMatch(lobby.players.map((player) => player.userId)),
+      };
+
+      await client.query(
+        `
+          UPDATE lobbies
+          SET state = 'in_game', settings = $2::jsonb, updated_at = NOW()
+          WHERE id = $1
+        `,
+        [validLobbyId, JSON.stringify(nextSettings)],
+      );
+
+      return readLobby(client, validLobbyId);
+    }),
+  );
+}
+
+export async function attackLobbyPlayer(
+  lobbyId: string,
+  attackerUserId: string,
+  targetUserId: string,
+) {
+  const validLobbyId = requireValidLobbyId(lobbyId);
+  const normalizedTargetUserId = targetUserId.trim();
+
+  if (!normalizedTargetUserId) {
+    throw createDatabaseError("Choose a player to attack.", 400);
   }
 
-  return readLobby(pool, lobbyId);
+  if (attackerUserId === normalizedTargetUserId) {
+    throw createDatabaseError("Choose another player to attack.", 400);
+  }
+
+  return withSchemaRetry(() =>
+    withTransaction(async (client) => {
+      await lockLobbyForUpdate(client, validLobbyId);
+      const lobby = await readLobby(client, validLobbyId);
+
+      if (lobby.state !== "in_game") {
+        throw createDatabaseError("The match is not live yet.", 409);
+      }
+
+      const match = lobby.match;
+
+      if (!match) {
+        throw createDatabaseError("The match is still loading. Try again in a moment.", 409);
+      }
+
+      if (match.status !== "active") {
+        throw createDatabaseError("This match has already ended.", 409);
+      }
+
+      const attacker = lobby.players.find((player) => player.userId === attackerUserId);
+
+      if (!attacker) {
+        throw createDatabaseError("You are not part of this lobby.", 403);
+      }
+
+      const target = lobby.players.find((player) => player.userId === normalizedTargetUserId);
+
+      if (!target) {
+        throw createDatabaseError("That player is not part of this match.", 404);
+      }
+
+      const attackerState = match.players.find((player) => player.userId === attackerUserId);
+
+      if (!attackerState || attackerState.health <= 0) {
+        throw createDatabaseError("You have already been eliminated from this match.", 409);
+      }
+
+      const targetState = match.players.find((player) => player.userId === normalizedTargetUserId);
+
+      if (!targetState) {
+        throw createDatabaseError("That player is missing from this match state.", 409);
+      }
+
+      if (targetState.health <= 0) {
+        throw createDatabaseError("That player has already been eliminated.", 409);
+      }
+
+      let nextMatch: LobbyMatch;
+
+      try {
+        nextMatch = applyMatchAttack(match, attackerUserId, normalizedTargetUserId);
+      } catch (error) {
+        if (error instanceof MatchStateError) {
+          throw createDatabaseError(error.message, 409);
+        }
+
+        throw error;
+      }
+
+      const matchFinished = nextMatch.status === "finished";
+      const nextSettings = {
+        ...lobby.settings,
+        match: nextMatch,
+      };
+
+      await client.query(
+        `
+          UPDATE lobbies
+          SET settings = $2::jsonb, updated_at = NOW()
+          WHERE id = $1
+        `,
+        [validLobbyId, JSON.stringify(nextSettings)],
+      );
+
+      if (matchFinished) {
+        await recordCompletedMatch(client, lobby, nextMatch);
+      }
+
+      return readLobby(client, validLobbyId);
+    }),
+  );
+}
+
+export async function restartLobbyMatch(lobbyId: string, userId: string) {
+  const validLobbyId = requireValidLobbyId(lobbyId);
+
+  return withSchemaRetry(() =>
+    withTransaction(async (client) => {
+      await lockLobbyForUpdate(client, validLobbyId);
+      const lobby = await readLobby(client, validLobbyId);
+
+      if (!lobby.players.some((player) => player.userId === userId)) {
+        throw createDatabaseError("You are not part of this lobby.", 403);
+      }
+
+      if (lobby.state !== "in_game" || !lobby.match || lobby.match.status !== "finished") {
+        throw createDatabaseError(
+          "This match cannot be reset until the winner has been decided.",
+          409,
+        );
+      }
+
+      const nextSettings = {
+        ...lobby.settings,
+        match: null,
+      };
+
+      await client.query(
+        `
+          UPDATE lobby_players
+          SET ready = FALSE
+          WHERE lobby_id = $1
+        `,
+        [validLobbyId],
+      );
+
+      await client.query(
+        `
+          UPDATE lobbies
+          SET state = 'waiting', settings = $2::jsonb, updated_at = NOW()
+          WHERE id = $1
+        `,
+        [validLobbyId, JSON.stringify(nextSettings)],
+      );
+
+      return readLobby(client, validLobbyId);
+    }),
+  );
 }
