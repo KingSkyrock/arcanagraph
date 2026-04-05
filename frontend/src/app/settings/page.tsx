@@ -286,6 +286,7 @@ export default function SettingsPage() {
                     alt={`${selectedProfilePicture.name} profile picture`}
                     fill
                     sizes="(max-width: 768px) 220px, 280px"
+                    unoptimized
                     className={settingsStyles.previewImage}
                   />
                 ) : (
@@ -339,13 +340,16 @@ export default function SettingsPage() {
                     disabled={disabled}
                   >
                     <div className={settingsStyles.profilePictureImageWrap}>
-                      <Image
-                        src={profilePicture.imagePath}
-                        alt={profilePicture.name}
-                        fill
-                        sizes="(max-width: 768px) 140px, 180px"
-                        className={settingsStyles.profilePictureImage}
-                      />
+                      <div className={settingsStyles.profilePictureImageInset}>
+                        <Image
+                          src={profilePicture.imagePath}
+                          alt={profilePicture.name}
+                          fill
+                          sizes="(max-width: 768px) 140px, 180px"
+                          unoptimized
+                          className={settingsStyles.profilePictureImage}
+                        />
+                      </div>
                     </div>
                     <div className={settingsStyles.profilePictureMeta}>
                       <strong>{profilePicture.name}</strong>

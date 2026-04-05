@@ -26,6 +26,8 @@
 
 .previewImage {
   object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .previewPlaceholder {
@@ -113,8 +115,15 @@
     rgba(9, 25, 76, 0.42);
 }
 
+.profilePictureImageInset {
+  position: absolute;
+  inset: 14px;
+}
+
 .profilePictureImage {
-  object-fit: cover;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .profilePictureMeta {
