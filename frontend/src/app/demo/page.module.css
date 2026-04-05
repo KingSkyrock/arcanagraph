@@ -2,7 +2,9 @@
   display: grid;
   gap: 28px;
   min-height: 100vh;
-  padding: 40px 44px 56px;
+  padding: 112px 44px 56px;
+  background: linear-gradient(180deg, #1877f2 0%, #2d87ff 55%, #4f9bff 100%);
+  color: #fff;
 }
 
 .hero {
@@ -21,21 +23,23 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: rgba(255, 255, 255, 0.74);
 }
 
 .hero h1 {
   max-width: 11ch;
   font-size: clamp(52px, 7vw, 84px);
+  font-family: "Impact", "Arial Black", "Oswald", system-ui, sans-serif;
   line-height: 0.92;
   letter-spacing: -0.06em;
+  color: #fff;
 }
 
 .copy {
   max-width: 46rem;
   font-size: 18px;
   line-height: 1.7;
-  color: var(--ink-soft);
+  color: rgba(255, 255, 255, 0.84);
 }
 
 .links {
@@ -51,10 +55,10 @@
   justify-content: center;
   min-height: 48px;
   padding: 0 18px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.35);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -68,19 +72,21 @@
 .linkButton:hover,
 .actionButton:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 24px rgba(10, 20, 68, 0.24);
 }
 
 .arena {
   display: grid;
   gap: 24px;
   padding: 24px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 36px;
-  background:
-    radial-gradient(circle at top center, rgba(255, 255, 255, 0.42), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(214, 255, 92, 0.22));
-  box-shadow: var(--shadow);
+  background: rgba(11, 31, 92, 0.24);
+  box-shadow:
+    0 28px 60px rgba(10, 20, 68, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
 }
 
 .arenaHeader {
@@ -94,12 +100,13 @@
   font-size: clamp(28px, 4vw, 44px);
   line-height: 0.98;
   letter-spacing: -0.05em;
+  color: #fff;
 }
 
 .note {
   font-size: 15px;
   line-height: 1.7;
-  color: var(--ink-soft);
+  color: rgba(255, 255, 255, 0.74);
 }
 
 .stage {
@@ -124,18 +131,18 @@
   display: grid;
   gap: 16px;
   padding: 18px;
-  border: 1px solid rgba(45, 17, 217, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 28px;
-  background: rgba(237, 255, 152, 0.52);
+  background: rgba(11, 31, 92, 0.3);
   backdrop-filter: blur(10px);
 }
 
 .leftPanel {
-  box-shadow: inset 0 0 0 1px rgba(61, 8, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .rightPanel {
-  box-shadow: inset 0 0 0 1px rgba(255, 201, 59, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 200, 59, 0.08);
 }
 
 .panelHeader {
@@ -151,7 +158,7 @@
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: rgba(255, 255, 255, 0.74);
 }
 
 .panelHeader h2 {
@@ -163,11 +170,12 @@
 .teamChip {
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(61, 8, 255, 0.12);
+  background: rgba(245, 158, 11, 0.18);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: #fff3c4;
 }
 
 .facecamShell {
@@ -182,23 +190,23 @@
   z-index: 2;
   min-height: 320px;
   border-radius: 32px;
-  border: 2px solid rgba(61, 8, 255, 0.24);
-  background: rgba(31, 13, 107, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  background: rgba(11, 31, 92, 0.8);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 24px 54px rgba(33, 0, 181, 0.24);
+    0 24px 54px rgba(10, 20, 68, 0.24);
 }
 
 .leftFacecam {
   background:
     radial-gradient(circle at 20% 18%, rgba(255, 245, 160, 0.16), transparent 26%),
-    linear-gradient(135deg, #1d06ad 0%, #2f0ffc 52%, #2100b5 100%);
+    linear-gradient(135deg, #0b1f5c 0%, #1a3a8f 52%, #0e2468 100%);
 }
 
 .rightFacecam {
   background:
     radial-gradient(circle at 82% 18%, rgba(255, 245, 160, 0.14), transparent 26%),
-    linear-gradient(225deg, #1a02a4 0%, #3d08ff 50%, #180084 100%);
+    linear-gradient(225deg, #0b1f5c 0%, #1a3a8f 50%, #0e2468 100%);
 }
 
 .facecamBackdrop {
@@ -233,7 +241,7 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02)),
-    rgba(7, 2, 51, 0.68);
+    rgba(11, 31, 92, 0.68);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.05),
     0 18px 40px rgba(0, 0, 0, 0.26);
@@ -275,10 +283,8 @@
 
 .actionButton {
   min-height: 52px;
-  border-color: rgba(255, 255, 255, 0.08);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12)),
-    rgba(33, 0, 181, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .actionButton:active {
@@ -289,12 +295,13 @@
   display: grid;
   gap: 24px;
   padding: 24px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 36px;
-  background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.34), transparent 30%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(237, 255, 152, 0.24));
-  box-shadow: var(--shadow);
+  background: rgba(11, 31, 92, 0.24);
+  box-shadow:
+    0 28px 60px rgba(10, 20, 68, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px);
 }
 
 .customizerHeader {
@@ -308,6 +315,7 @@
   font-size: clamp(28px, 4vw, 44px);
   line-height: 0.98;
   letter-spacing: -0.05em;
+  color: #fff;
 }
 
 .customizerGrid {
@@ -321,9 +329,9 @@
   display: grid;
   gap: 18px;
   padding: 20px;
-  border: 1px solid rgba(45, 17, 217, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 28px;
-  background: rgba(237, 255, 152, 0.52);
+  background: rgba(11, 31, 92, 0.3);
 }
 
 .previewLabel {
@@ -331,7 +339,7 @@
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: rgba(255, 255, 255, 0.74);
 }
 
 .pixelShell {
@@ -343,8 +351,8 @@
   overflow: hidden;
   border-radius: 28px;
   background:
-    linear-gradient(180deg, rgba(18, 6, 40, 0.06), rgba(61, 8, 255, 0.16)),
-    rgba(35, 12, 115, 0.86);
+    linear-gradient(180deg, rgba(11, 31, 92, 0.4), rgba(11, 31, 92, 0.7)),
+    rgba(11, 31, 92, 0.86);
 }
 
 .pixelAura {
@@ -369,10 +377,10 @@
   border-radius: 22px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 16%),
-    rgba(12, 5, 45, 0.72);
+    rgba(11, 31, 92, 0.72);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 22px 40px rgba(4, 0, 20, 0.28);
+    0 22px 40px rgba(10, 20, 68, 0.28);
 }
 
 .pixelCell {
@@ -398,8 +406,8 @@
 .selectionPill {
   padding: 10px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(45, 17, 217, 0.14);
-  background: rgba(255, 255, 255, 0.26);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -415,9 +423,9 @@
   display: grid;
   gap: 14px;
   padding: 18px;
-  border: 1px solid rgba(45, 17, 217, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 24px;
-  background: rgba(237, 255, 152, 0.42);
+  background: rgba(11, 31, 92, 0.3);
 }
 
 .carouselHeader {
@@ -433,13 +441,14 @@
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: rgba(255, 255, 255, 0.74);
 }
 
 .carouselHeader h3 {
   font-size: 24px;
   line-height: 1;
   letter-spacing: -0.04em;
+  color: #fff;
 }
 
 .carouselCount {
@@ -447,7 +456,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: rgba(255, 255, 255, 0.74);
 }
 
 .carouselBody {
@@ -463,10 +472,10 @@
   justify-content: center;
   width: 52px;
   height: 52px;
-  border: 1px solid rgba(45, 17, 217, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.34);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
@@ -478,7 +487,8 @@
 
 .carouselButton:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 24px rgba(10, 20, 68, 0.24);
 }
 
 .carouselViewport {
@@ -492,9 +502,9 @@
   gap: 8px;
   min-height: 104px;
   padding: 14px;
-  border: 1px solid rgba(45, 17, 217, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.08);
   opacity: 0.56;
   transform: scale(0.95);
   transition:
@@ -509,19 +519,20 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: rgba(255, 255, 255, 0.74);
 }
 
 .optionCard strong {
   font-size: 16px;
   line-height: 1.2;
+  color: #fff;
 }
 
 .activeOption {
   opacity: 1;
   transform: scale(1.02);
-  border-color: rgba(61, 8, 255, 0.22);
-  background: rgba(61, 8, 255, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.12);
 }
 
 .swatchRow {
@@ -533,7 +544,7 @@
 .swatch {
   width: 18px;
   height: 18px;
-  border: 1px solid rgba(18, 6, 40, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 4px;
 }
 

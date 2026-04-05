@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { apiBaseUrl, apiUrl } from "@/lib/api";
 import type { AppUser, Lobby, LobbyPlayer } from "@/lib/types";
-import styles from "./page.module.css";
 
 type LobbyResponse = {
   lobby: Lobby;
@@ -343,131 +342,146 @@ export function PlayClient() {
   const allPlayersReady = lobby?.players.every((player) => player.ready) ?? false;
   const isHost = lobby?.hostUserId === user?.id;
 
+  const panelStyle: React.CSSProperties = {
+    display: 'grid', gap: 18, padding: 24,
+    border: '1px solid rgba(255,255,255,0.18)', borderRadius: 30,
+    background: 'rgba(11,31,92,0.24)',
+    boxShadow: '0 28px 60px rgba(10,20,68,0.22), inset 0 1px 0 rgba(255,255,255,0.16)',
+    backdropFilter: 'blur(14px)', alignContent: 'start',
+  };
+  const labelStyle: React.CSSProperties = {
+    fontSize: 13, fontWeight: 800, letterSpacing: '0.12em',
+    textTransform: 'uppercase', color: 'rgba(255,255,255,0.74)',
+  };
+  const headingStyle: React.CSSProperties = {
+    fontSize: 'clamp(28px,4vw,44px)', lineHeight: 0.95,
+    letterSpacing: '-0.05em', color: '#fff',
+    fontFamily: "'Impact','Arial Black','Oswald',system-ui,sans-serif",
+  };
+  const legoBtn: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    minHeight: 48, padding: '0 18px', border: 0, borderRadius: 18,
+    fontWeight: 800, cursor: 'pointer', color: '#fff',
+    background: '#f59e0b',
+    boxShadow: '0 4px 0 #b45309, 0 4px 12px rgba(0,0,0,0.2)',
+    transition: 'transform 0.18s ease-out, box-shadow 0.18s, background 0.18s',
+    fontFamily: "'Nunito',system-ui,sans-serif", fontSize: 16,
+  };
+  const ghostBtn: React.CSSProperties = {
+    ...legoBtn,
+    background: 'rgba(255,255,255,0.14)',
+    border: '1px solid rgba(255,255,255,0.18)',
+    boxShadow: 'none',
+  };
+  const pillStyle: React.CSSProperties = {
+    padding: '8px 12px', borderRadius: 999,
+    background: 'rgba(245,158,11,0.18)', fontSize: 13, fontWeight: 800, color: '#fff3c4',
+  };
+
   if (!user) {
     return (
-      <section className={styles.panel}>
-        <p className={styles.label}>Session required</p>
-        <h2>Sign in before joining a match.</h2>
-        <p className={styles.muted}>
-          The new lobby flow is tied to the same Firebase + Express session cookie as the
-          leaderboard and progression system.
+      <section style={panelStyle}>
+        <p style={labelStyle}>Session required</p>
+        <h2 style={headingStyle}>Sign in before joining a match.</h2>
+        <p style={{ fontSize: 16, lineHeight: 1.7, color: 'rgba(255,255,255,0.84)' }}>
+          Log in with your Arcanagraph player account to create or join a multiplayer lobby.
         </p>
-        <Link className={styles.primaryButton} href="/login">
-          Go to login
-        </Link>
+        <Link href="/login" style={legoBtn}>Go to login</Link>
       </section>
     );
   }
 
   return (
-    <section className={styles.layout}>
-      <div className={styles.panel}>
-        <div className={styles.panelHeader}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px,420px) minmax(0,1fr)', gap: 24 }}>
+      <div style={panelStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
           <div>
-            <p className={styles.label}>Matchmaking</p>
-            <h2>Create or join</h2>
+            <p style={labelStyle}>Matchmaking</p>
+            <h2 style={headingStyle}>Create or join</h2>
           </div>
-          <span className={styles.connection}>
-            {socketConnected ? "Socket online" : "Socket offline"}
-          </span>
+          <span style={pillStyle}>{socketConnected ? "Socket online" : "Socket offline"}</span>
         </div>
 
-        <div className={styles.actions}>
-          <button
-            className={styles.primaryButton}
-            type="button"
-            onClick={handleCreateLobby}
-            disabled={busy}
-          >
-            Create lobby
-          </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          <button style={legoBtn} type="button" onClick={handleCreateLobby} disabled={busy}>Create lobby</button>
 
-          <div className={styles.joinRow}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 10, width: 'min(100%,340px)' }}>
             <input
               value={inviteCode}
               onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
               placeholder="Invite code"
               maxLength={6}
+              style={{
+                minHeight: 48, padding: '0 14px', border: '1px solid rgba(255,255,255,0.18)',
+                borderRadius: 18, background: 'rgba(255,255,255,0.14)', color: '#fff',
+                fontWeight: 700, textTransform: 'uppercase', fontSize: 16,
+              }}
             />
             <button
-              type="button"
+              type="button" style={ghostBtn}
               onClick={handleJoinLobby}
               disabled={busy || !socketConnected || !inviteCode.trim()}
-            >
-              Join
-            </button>
+            >Join</button>
           </div>
         </div>
 
-        <div className={styles.statusCard}>
-          <p className={styles.label}>Status</p>
-          <strong>{status}</strong>
-          {error ? <p className={styles.error}>{error}</p> : null}
+        <div style={{ display: 'grid', gap: 10, padding: 18, borderRadius: 22, background: 'rgba(255,255,255,0.14)' }}>
+          <p style={labelStyle}>Status</p>
+          <strong style={{ fontSize: 20, lineHeight: 1.35 }}>{status}</strong>
+          {error ? <p style={{ color: '#fca5a5', fontSize: 14 }}>{error}</p> : null}
         </div>
       </div>
 
-      <div className={styles.panel}>
-        <div className={styles.panelHeader}>
+      <div style={panelStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
           <div>
-            <p className={styles.label}>Active lobby</p>
-            <h2>{lobby ? lobby.inviteCode : "No lobby selected"}</h2>
+            <p style={labelStyle}>Active lobby</p>
+            <h2 style={headingStyle}>{lobby ? lobby.inviteCode : "No lobby selected"}</h2>
           </div>
-          {lobby ? <span className={styles.statePill}>{lobby.state}</span> : null}
+          {lobby ? <span style={pillStyle}>{lobby.state}</span> : null}
         </div>
 
         {lobby ? (
           <>
-            <div className={styles.detailGrid}>
-              <div className={styles.detailCard}>
-                <span>Invite code</span>
-                <strong>{lobby.inviteCode}</strong>
-              </div>
-              <div className={styles.detailCard}>
-                <span>Players</span>
-                <strong>{lobby.players.length}</strong>
-              </div>
-              <div className={styles.detailCard}>
-                <span>Host</span>
-                <strong>{isHost ? "You" : "Another player"}</strong>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}>
+              {[
+                { label: 'Invite code', value: lobby.inviteCode },
+                { label: 'Players', value: String(lobby.players.length) },
+                { label: 'Host', value: isHost ? 'You' : 'Another player' },
+              ].map(d => (
+                <div key={d.label} style={{ display: 'grid', gap: 6, padding: 18, borderRadius: 22, background: 'rgba(255,255,255,0.1)' }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>{d.label}</span>
+                  <strong style={{ fontSize: 24, lineHeight: 1, color: '#fff' }}>{d.value}</strong>
+                </div>
+              ))}
             </div>
 
-            <div className={styles.controlRow}>
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={handleReadyToggle}
-                disabled={busy || !currentPlayer || lobby.state !== "waiting"}
-              >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              <button type="button" style={ghostBtn} onClick={handleReadyToggle} disabled={busy || !currentPlayer || lobby.state !== "waiting"}>
                 {currentPlayer?.ready ? "Unready" : "Ready up"}
               </button>
-
               {isHost ? (
-                <button
-                  type="button"
-                  className={styles.primaryButton}
-                  onClick={handleStartGame}
-                  disabled={busy || !allPlayersReady || lobby.state !== "waiting"}
-                >
+                <button type="button" style={legoBtn} onClick={handleStartGame} disabled={busy || !allPlayersReady || lobby.state !== "waiting"}>
                   Start game
                 </button>
               ) : null}
-
               {lobby.state === "in_game" ? (
-                <Link className={styles.secondaryButton} href={`/game/${lobby.id}`}>
-                  Open game
-                </Link>
+                <Link href={`/game/${lobby.id}`} style={ghostBtn}>Open game</Link>
               ) : null}
             </div>
 
-            <ol className={styles.roster}>
+            <ol style={{ display: 'grid', gap: 12, padding: 0, listStyle: 'none' }}>
               {lobby.players.map((player) => (
-                <li key={player.userId} className={styles.rosterItem}>
-                  <div>
-                    <strong>{formatPlayerName(player)}</strong>
-                    <small>{formatPlayerRank(player)}</small>
+                <li key={player.userId} style={{
+                  display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 14,
+                  alignItems: 'center', padding: '16px 18px', borderRadius: 20,
+                  background: 'rgba(255,255,255,0.12)',
+                }}>
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <strong style={{ fontSize: 17 }}>{formatPlayerName(player)}</strong>
+                    <small style={{ fontSize: 12, lineHeight: 1.4, color: 'rgba(255,255,255,0.74)' }}>{formatPlayerRank(player)}</small>
                   </div>
-                  <span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,0.74)' }}>
                     {player.isHost ? "Host" : "Player"} · {player.ready ? "Ready" : "Waiting"}
                   </span>
                 </li>
@@ -475,12 +489,11 @@ export function PlayClient() {
             </ol>
           </>
         ) : (
-          <p className={styles.muted}>
-            Create a lobby or join one with an invite code to bring the multiplayer flow into
-            the current app shell.
+          <p style={{ fontSize: 16, lineHeight: 1.7, color: 'rgba(255,255,255,0.84)' }}>
+            Create a lobby or join one with an invite code to start a multiplayer match.
           </p>
         )}
       </div>
-    </section>
+    </div>
   );
 }

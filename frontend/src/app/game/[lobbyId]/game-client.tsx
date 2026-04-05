@@ -12,6 +12,7 @@ import type {
   LobbyPlayer,
   MatchPlayer,
 } from "@/lib/types";
+import Navbar from "@/components/Navbar";
 import { GraphBattlePanel } from "./graph-battle-panel";
 import styles from "./page.module.css";
 
@@ -421,21 +422,25 @@ export function GameClient({ lobbyId }: GameClientProps) {
 
   if (!user) {
     return (
-      <section className={styles.panel}>
-        <p className={styles.label}>Session required</p>
-        <h2>Sign in before joining a match.</h2>
-        <p className={styles.muted}>
-          The game room uses the same Firebase and Express session as the lobby flow.
-        </p>
-        <Link className={styles.linkButton} href="/login">
-          Go to login
-        </Link>
-      </section>
+      <main className={styles.page} style={{ paddingTop: 112 }}>
+        <Navbar />
+        <section className={styles.panel}>
+          <p className={styles.label}>Session required</p>
+          <h2>Sign in before joining a match.</h2>
+          <p className={styles.muted}>
+            The game room uses the same Firebase and Express session as the lobby flow.
+          </p>
+          <Link className={styles.linkButton} href="/login">
+            Go to login
+          </Link>
+        </section>
+      </main>
     );
   }
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} style={{ paddingTop: 112 }}>
+      <Navbar />
       <section className={styles.shell}>
         <div className={styles.hero}>
           <p className={styles.kicker}>Game Room</p>

@@ -15,9 +15,9 @@ const LEADERBOARD = [
 ];
 
 const DIV_STYLE:Record<string, { bg: string; text: string; border: string }> = {
-  Advanced:     { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
-  Intermediate: { bg: '#fef9c3', text: '#a16207', border: '#fde047' },
-  Beginner:     { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
+  Advanced:     { bg: 'rgba(59,130,246,0.3)', text: '#93c5fd', border: 'rgba(147,197,253,0.4)' },
+  Intermediate: { bg: 'rgba(245,158,11,0.25)', text: '#fbbf24', border: 'rgba(251,191,36,0.4)' },
+  Beginner:     { bg: 'rgba(34,197,94,0.25)', text: '#86efac', border: 'rgba(134,239,172,0.4)' },
 };
 const RANK_ICON:Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
@@ -233,15 +233,16 @@ function LeaderboardSection() {
   return (
     <section id="leaderboard" style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '96px 24px', background: '#eef4ff',
+      padding: '96px 24px',
+      background: 'linear-gradient(180deg, #2563eb 0%, #3b82f6 100%)',
     }}>
       <div style={{ width: '100%', maxWidth: 820 }}>
         <div style={{ textAlign: 'center', marginBottom: 44 }}>
           <h2 style={{
-            fontSize: 60, fontWeight: 900, color: '#1a56db', margin: '0 0 10px',
-            fontFamily: " 'Arial Black', 'Oswald', system-ui, sans-serif", letterSpacing: '-1px',
+            fontSize: 60, fontWeight: 900, color: '#fff', margin: '0 0 10px',
+            fontFamily: "'Impact', 'Arial Black', 'Oswald', system-ui, sans-serif", letterSpacing: '-1px',
           }}>Leaderboard</h2>
-          <p style={{ color: '#64748b', fontSize: 18, fontFamily: "'Nunito', system-ui, sans-serif" }}>
+          <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: 18, fontFamily: "'Nunito', system-ui, sans-serif" }}>
             Top wizards this week
           </p>
         </div>
@@ -250,22 +251,25 @@ function LeaderboardSection() {
           {tabs.map(t => (
             <button key={t} onClick={() => setFilter(t)} style={{
               padding: '9px 24px', borderRadius: 50, cursor: 'pointer',
-              border: filter === t ? 'none' : '1.5px solid #cbd5e1',
-              background: filter === t ? '#1a56db' : '#fff',
-              color: filter === t ? '#fff' : '#334155',
+              border: filter === t ? 'none' : '1.5px solid rgba(255,255,255,0.24)',
+              background: filter === t ? '#f59e0b' : 'rgba(255,255,255,0.14)',
+              color: '#fff',
               fontWeight: 700, fontSize: 14, transition: 'all 0.15s',
               fontFamily: "'Nunito', system-ui, sans-serif",
+              boxShadow: filter === t ? '0 4px 0 #b45309, 0 4px 12px rgba(0,0,0,0.2)' : 'none',
             }}>{t}</button>
           ))}
         </div>
 
         <div style={{
-          background: '#fff', borderRadius: 20, overflow: 'hidden',
-          boxShadow: '0 4px 40px rgba(26,86,219,0.1)', border: '1.5px solid #e2e8f0',
+          background: 'rgba(11,31,92,0.24)', borderRadius: 20, overflow: 'hidden',
+          boxShadow: '0 28px 60px rgba(10,20,68,0.22), inset 0 1px 0 rgba(255,255,255,0.16)',
+          border: '1px solid rgba(255,255,255,0.18)',
+          backdropFilter: 'blur(14px)',
         }}>
           <div style={{
             display: 'grid', gridTemplateColumns: '60px 1fr 170px 110px 80px',
-            padding: '14px 28px', background: '#1a56db', color: '#fff',
+            padding: '14px 28px', background: 'rgba(11,31,92,0.4)', color: '#fff',
             fontWeight: 800, fontSize: 13, letterSpacing: '0.6px',
             fontFamily: "'Nunito', system-ui, sans-serif",
           }}>
@@ -276,23 +280,23 @@ function LeaderboardSection() {
               display: 'grid', gridTemplateColumns: '60px 1fr 170px 110px 80px',
               padding: '17px 28px',
               background: 'transparent',
-              borderBottom: i < rows.length - 1 ? '1px solid #f1f5f9' : 'none',
+              borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
               alignItems: 'center', transition: 'background 0.15s',
             }}
-              onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-              onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#f8fafc' : '#fff'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              <span style={{ fontSize: row.rank <= 3 ? 22 : 16, fontWeight: 700, color: '#94a3b8' }}>
+              <span style={{ fontSize: row.rank <= 3 ? 22 : 16, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>
                 {RANK_ICON[row.rank] ?? `#${row.rank}`}
               </span>
-              <span style={{ fontWeight: 800, color: '#1e293b', fontSize: 16, fontFamily: "'Nunito', system-ui, sans-serif" }}>
+              <span style={{ fontWeight: 800, color: '#fff', fontSize: 16, fontFamily: "'Nunito', system-ui, sans-serif" }}>
                 {row.name}
               </span>
               <DivBadge d={row.division} />
-              <span style={{ fontWeight: 800, color: '#1a56db', fontSize: 16, fontFamily: "'Nunito', system-ui, sans-serif" }}>
+              <span style={{ fontWeight: 800, color: '#fbbf24', fontSize: 16, fontFamily: "'Nunito', system-ui, sans-serif" }}>
                 {row.score.toLocaleString()}
               </span>
-              <span style={{ color: '#64748b', fontWeight: 700, fontFamily: "'Nunito', system-ui, sans-serif" }}>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontFamily: "'Nunito', system-ui, sans-serif" }}>
                 {row.wins}W
               </span>
             </div>
