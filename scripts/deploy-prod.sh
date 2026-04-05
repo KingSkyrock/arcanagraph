@@ -36,10 +36,21 @@ ssh "$SERVER" "
   pm2 restart all --update-env > /dev/null 2>&1 || pm2 start $APP_ROOT/ops/pm2/ecosystem.config.cjs
   pm2 save
 
-  sleep 3
-  echo '==> Health check...'
-  curl -sf http://localhost:4000/api/health && echo '' || echo 'Backend health check failed!'
-  curl -sf http://localhost:3000 > /dev/null && echo 'Frontend OK' || echo 'Frontend health check failed!'
+  echo '==> Health check (waiting up to 15s)...'
+  for i in 1 2 3 4 5; do
+    sleep 3
+    backend=\$(curl -sf http://localhost:4000/api/health 2>/dev/null && echo ok || echo fail)
+    frontend=\$(curl -sf http://localhost:3000 > /dev/null 2>&1 && echo ok || echo fail)
+    if [ \"\$backend\" = 'ok' ] && [ \"\$frontend\" = 'ok' ]; then
+      echo 'Backend OK'
+      echo 'Frontend OK'
+      break
+    fi
+    if [ \$i -eq 5 ]; then
+      [ \"\$backend\" != 'ok' ] && echo 'Backend health check failed!'
+      [ \"\$frontend\" != 'ok' ] && echo 'Frontend health check failed!'
+    fi
+  done
 
   echo '==> Deploy complete at commit \$(git rev-parse --short HEAD)'
 "

@@ -129,7 +129,7 @@ export function HowToPlayModal({ open, onClose }: HowToPlayModalProps) {
         </div>
 
         <p style={{ fontSize: 16, lineHeight: 1.65, color: "rgba(255,255,255,0.84)", maxWidth: 600 }}>
-          Keep your chosen hand in view of the camera. The game only listens to a few gestures while you trace.
+          Keep your drawing hand in view of the camera. The game only listens to a few gestures while you trace.
         </p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginTop: 8 }}>
@@ -137,6 +137,7 @@ export function HowToPlayModal({ open, onClose }: HowToPlayModalProps) {
             { icon: "☝️", iconLabel: "Pointing finger", title: "Point with your index finger to draw", desc: "Trace the graph with one pointed index finger. That is the only hand shape that adds to your drawing path." },
             { icon: "✊ ✌️", iconLabel: "Fist and peace sign", title: "Fists and peace signs do nothing", desc: "If your hand is closed or making a peace sign, the game ignores it. Those shapes will not draw and will not submit." },
             { icon: "🖐️", iconLabel: "Open palm", title: "Show an open palm to finish", desc: "Turn your palm toward the camera when you are done drawing. That starts grading and tells the game to score your trace." },
+            { icon: "🧪", iconLabel: "Potion bottle", title: "Grab powerups with your other hand", desc: "Powerups appear on the grid during battle. Use your non-drawing hand to hover over them for a second to collect. Potions heal you, attack spells damage opponents, and multipliers boost your next score." },
           ].map((step) => (
             <article
               key={step.title}

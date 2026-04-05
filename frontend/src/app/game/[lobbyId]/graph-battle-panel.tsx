@@ -1934,7 +1934,10 @@ export function GraphBattlePanel({
 
     const handleCollected = (data: { powerupId: string; userId: string; type: string; effectDescription: string }) => {
       window.dispatchEvent(new CustomEvent("powerup:despawn", { detail: data.powerupId }));
-      window.dispatchEvent(new CustomEvent("powerup:feedback", { detail: data }));
+      // Only show the feedback animation for the player who collected it
+      if (data.userId === currentPlayer.userId) {
+        window.dispatchEvent(new CustomEvent("powerup:feedback", { detail: data }));
+      }
     };
 
     socket.on("powerup:spawn", handleSpawn);
@@ -2087,9 +2090,22 @@ export function GraphBattlePanel({
                         </div>
                       </>
                     ) : (
-                      <span className={styles.meta}>Pick an opponent from the player list.</span>
+                      <span className={styles.meta}>Waiting for opponent...</span>
                     )}
                   </div>
+                  {lobbyMatch ? (() => {
+                    const myMatch = lobbyMatch.players.find((p) => p.userId === currentPlayer.userId);
+                    if (!myMatch) return null;
+                    const myHealthPct = Math.max(0, Math.min(100, (myMatch.health / lobbyMatch.maxHealth) * 100));
+                    return (
+                      <div className={styles.cvOpponentCard}>
+                        <strong>{formatPlayerName(currentPlayer)} (You)</strong>
+                        <div className={styles.healthTrack} aria-hidden="true">
+                          <div className={styles.healthFill} style={{ width: `${myHealthPct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })() : null}
                 </div>
 
                 <div

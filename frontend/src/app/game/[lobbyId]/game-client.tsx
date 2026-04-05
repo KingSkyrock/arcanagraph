@@ -483,23 +483,6 @@ export function GameClient({ lobbyId }: GameClientProps) {
             <span className={styles.state}>{socketConnected ? "Live" : "Reconnecting..."}</span>
           </div>
 
-          {currentMatchPlayer && lobby?.match ? (
-            <div style={{ display: "grid", gap: 6 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <span className={styles.label}>Your Health</span>
-                <strong style={{ fontSize: 18 }}>
-                  {currentMatchPlayer.health} / {lobby.match.maxHealth}
-                </strong>
-              </div>
-              <div className={styles.healthTrack}>
-                <div
-                  className={styles.healthFill}
-                  style={{ width: `${Math.max(0, Math.min(100, (currentMatchPlayer.health / lobby.match.maxHealth) * 100))}%` }}
-                />
-              </div>
-            </div>
-          ) : null}
-
           <div className={styles.summaryGrid}>
             <div className={styles.summaryCard}>
               <span>Match status</span>

@@ -25,7 +25,7 @@ export const MAX_ACTIVE = 2;
 export const COLLECT_HOVER_MS = 1000;
 export const MIN_CURVE_DISTANCE = 2.0; // math units from any curve point
 export const SPAWN_INTERVAL_MS = 2000;
-export const SPAWN_CHANCE = 0.1; // per tick when below MAX_ACTIVE
+export const SPAWN_CHANCE = 0.25; // per tick when below MAX_ACTIVE
 export const SECOND_SPAWN_WINDOW_MS = 4000; // second powerup only when first has < this remaining
 
 // Box-Muller normal distribution for multiplier, centered at 1.3
