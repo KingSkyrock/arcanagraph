@@ -12,6 +12,8 @@ import {
   startLobbyGame,
   upsertUser,
   updateLobbyPlayerReady,
+  updateUserProfilePicture,
+  updateUserPrimaryHand,
 } from "./db";
 
 const cleanupPool = new Pool({
@@ -205,5 +207,93 @@ test("restartLobbyMatch returns the same players to a waiting ready-up state", a
   assert.deepEqual(
     restartedLobby.players.map((player) => player.ready),
     [false, false],
+  );
+});
+
+test("updateUserPrimaryHand persists the selected hand on the player profile", async (t) => {
+  const cleanup = createCleanupState();
+  t.after(async () => {
+    await cleanupTestData(cleanup);
+  });
+
+  const user = await createTestUser(cleanup, "handed-player");
+  const updatedUser = await updateUserPrimaryHand(user.id, "Left");
+
+  assert.equal(updatedUser.primaryHand, "Left");
+
+  const result = await cleanupPool.query(
+    `
+      SELECT primary_hand
+      FROM users
+      WHERE id = $1
+    `,
+    [user.id],
+  );
+
+  assert.equal(result.rows[0]?.primary_hand, "Left");
+});
+
+test("updateUserProfilePicture persists unlocked pictures and rejects locked ones", async (t) => {
+  const cleanup = createCleanupState();
+  t.after(async () => {
+    await cleanupTestData(cleanup);
+  });
+
+  const user = await createTestUser(cleanup, "avatar-player");
+  const updatedUser = await updateUserProfilePicture(user.id, "octupode");
+
+  assert.equal(updatedUser.profilePictureId, "octupode");
+
+  const persistedResult = await cleanupPool.query(
+    `
+      SELECT profile_picture_id
+      FROM users
+      WHERE id = $1
+    `,
+    [user.id],
+  );
+
+  assert.equal(persistedResult.rows[0]?.profile_picture_id, "octupode");
+
+  await assert.rejects(
+    () => updateUserProfilePicture(user.id, "tiger"),
+    /Level 5/,
+  );
+
+  await cleanupPool.query(
+    `
+      UPDATE users
+      SET level = 5
+      WHERE id = $1
+    `,
+    [user.id],
+  );
+
+  const unlockedUser = await updateUserProfilePicture(user.id, "tiger");
+  assert.equal(unlockedUser.profilePictureId, "tiger");
+});
+
+test("users.primary_hand rejects values outside the supported hand choices", async (t) => {
+  const cleanup = createCleanupState();
+  t.after(async () => {
+    await cleanupTestData(cleanup);
+  });
+
+  const user = await createTestUser(cleanup, "invalid-hand");
+
+  await assert.rejects(
+    cleanupPool.query(
+      `
+        UPDATE users
+        SET primary_hand = 'Both'
+        WHERE id = $1
+      `,
+      [user.id],
+    ),
+    (error: unknown) =>
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "23514",
   );
 });

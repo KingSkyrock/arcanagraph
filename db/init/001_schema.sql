@@ -5,6 +5,9 @@ CREATE TABLE IF NOT EXISTS users (
   firebase_uid TEXT NOT NULL UNIQUE,
   email TEXT UNIQUE,
   display_name TEXT,
+  primary_hand TEXT CONSTRAINT users_primary_hand_check
+    CHECK (primary_hand IS NULL OR primary_hand IN ('Left', 'Right')),
+  profile_picture_id TEXT NOT NULL DEFAULT 'elephant',
   xp INTEGER NOT NULL DEFAULT 0,
   level INTEGER NOT NULL DEFAULT 1,
   wins INTEGER NOT NULL DEFAULT 0,

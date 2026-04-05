@@ -1,0 +1,26 @@
+[
+  {
+    "id": "elephant",
+    "name": "Elephant",
+    "imagePath": "/images/elephant.webp",
+    "unlockLevel": 1
+  },
+  {
+    "id": "octupode",
+    "name": "Octupode",
+    "imagePath": "/images/octupode.webp",
+    "unlockLevel": 1
+  },
+  {
+    "id": "red_pander",
+    "name": "Red Pander",
+    "imagePath": "/images/red_pander.webp",
+    "unlockLevel": 3
+  },
+  {
+    "id": "tiger",
+    "name": "Tiger",
+    "imagePath": "/images/tiger.webp",
+    "unlockLevel": 5
+  }
+]
