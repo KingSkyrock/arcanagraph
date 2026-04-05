@@ -50,6 +50,7 @@ export function SoloGameClient() {
   const searchParams = useSearchParams();
   const [guestPlayer] = useState(createGuestLobbyPlayer);
   const [user, setUser] = useState<AppUser | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
   const selectedSkillFamily = searchParams.get("skillFamily");
   const selectedSkillFamilyLabel = selectedSkillFamily
     ? formatSkillFamilyLabel(selectedSkillFamily)
@@ -78,6 +79,9 @@ export function SoloGameClient() {
           "Solo practice is continuing in guest mode because the player session could not be loaded.",
           loadError,
         );
+      })
+      .finally(() => {
+        setSessionReady(true);
       });
   }, []);
 
@@ -107,6 +111,9 @@ export function SoloGameClient() {
             <Link className={styles.linkButton} href="/play">
               Back to mode select
             </Link>
+            <Link className={styles.linkButton} href="/settings">
+              Hand settings
+            </Link>
             <Link className={styles.linkButton} href="/">
               Home
             </Link>
@@ -121,6 +128,8 @@ export function SoloGameClient() {
           disabled={true}
           solo
           soloSkillFamily={selectedSkillFamily}
+          sessionUser={user}
+          sessionReady={sessionReady}
           onSuccessfulScore={async () => {}}
         />
       </section>

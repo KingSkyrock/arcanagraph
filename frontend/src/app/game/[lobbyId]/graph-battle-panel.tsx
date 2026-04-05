@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import katex from "katex";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -9,7 +10,11 @@ import type {
 } from "@mediapipe/tasks-vision";
 import type { Socket } from "socket.io-client";
 import { apiUrl } from "@/lib/api";
-import type { LobbyMatch, LobbyPlayer } from "@/lib/types";
+import {
+  formatPrimaryHandLabel,
+  usePrimaryHandPreference,
+} from "@/lib/hand-preference";
+import type { AppUser, LobbyMatch, LobbyPlayer } from "@/lib/types";
 import styles from "./page.module.css";
 import {
   drawGrid,
@@ -32,6 +37,8 @@ type GraphBattlePanelProps = {
   opponents: LobbyPlayer[];
   selectedTargetId: string | null;
   disabled: boolean;
+  sessionUser?: AppUser | null;
+  sessionReady?: boolean;
   solo?: boolean;
   soloSkillFamily?: string | null;
   onSuccessfulScore: (targetUserId: string, score: number) => Promise<void>;
@@ -109,6 +116,8 @@ export function GraphBattlePanel({
   opponents,
   selectedTargetId,
   disabled,
+  sessionUser = null,
+  sessionReady = false,
   solo = false,
   soloSkillFamily = null,
   onSuccessfulScore,
@@ -141,6 +150,14 @@ export function GraphBattlePanel({
   const [equationMarkup, setEquationMarkup] = useState("");
   const [localError, setLocalError] = useState("");
   const [lockedTargetId, setLockedTargetId] = useState<string | null>(null);
+  const {
+    primaryHand,
+    source: primaryHandSource,
+    ready: primaryHandReady,
+    saving: savingPrimaryHand,
+    error: primaryHandError,
+    savePrimaryHand,
+  } = usePrimaryHandPreference(sessionUser, sessionReady);
 
   const selectedOpponent = useMemo(
     () =>
@@ -187,6 +204,17 @@ export function GraphBattlePanel({
   }, [solo, soloSkillFamily]);
 
   useEffect(() => {
+    if (!sessionReady || !primaryHandReady) {
+      setTrackingStatus("Loading your hand-tracking setup...");
+      return;
+    }
+
+    if (!primaryHand) {
+      setTrackingStatus("Choose your primary hand to start hand tracking.");
+    }
+  }, [primaryHand, primaryHandReady, sessionReady]);
+
+  useEffect(() => {
     const video = videoRef.current!;
     const gridCanvas = gridRef.current;
     const drawCanvas = drawingRef.current;
@@ -205,6 +233,16 @@ export function GraphBattlePanel({
     ) {
       return;
     }
+
+    if (!sessionReady || !primaryHandReady) {
+      return;
+    }
+
+    if (!primaryHand) {
+      return;
+    }
+
+    const trackedHand = primaryHand;
 
     const overlayContext = overlayCanvas.getContext("2d")!;
     const drawingContext = drawCanvas.getContext("2d")!;
@@ -781,7 +819,9 @@ export function GraphBattlePanel({
         runtimeVideo.play().catch(() => resolve());
       });
 
-      setTrackingStatus("Draw with your index finger, then hold an open palm to grade.");
+      setTrackingStatus(
+        `Tracking your ${formatPrimaryHandLabel(trackedHand).toLowerCase()}. Draw with your index finger, then hold an open palm to grade.`,
+      );
     }
 
     function detect() {
@@ -820,7 +860,16 @@ export function GraphBattlePanel({
           const gestureResults = gestureRecognizer.recognizeForVideo(runtimeVideo, now + 0.1);
           let palmNow = false;
 
-          for (const gestureList of gestureResults.gestures ?? []) {
+          for (let gestureIndex = 0; gestureIndex < (gestureResults.gestures?.length ?? 0); gestureIndex += 1) {
+            const gestureList = gestureResults.gestures?.[gestureIndex] ?? [];
+            const gestureHand =
+              gestureResults.handedness?.[gestureIndex]?.[0]?.categoryName ??
+              gestureResults.handednesses?.[gestureIndex]?.[0]?.categoryName;
+
+            if (gestureHand !== trackedHand) {
+              continue;
+            }
+
             if (gestureList[0]?.categoryName === "Open_Palm") {
               palmNow = true;
               break;
@@ -960,6 +1009,15 @@ export function GraphBattlePanel({
           const label = results.handednesses[handIndex]?.[0]?.categoryName as HandLabel | undefined;
 
           if (label !== "Left" && label !== "Right") {
+            continue;
+          }
+
+          if (label !== trackedHand) {
+            if (wasDrawing[label]) {
+              trails[label].push(null);
+            }
+
+            resetTrackingState(label);
             continue;
           }
 
@@ -1244,7 +1302,7 @@ export function GraphBattlePanel({
             delegate: "GPU",
           },
           runningMode: "VIDEO",
-          numHands: 1,
+          numHands: 2,
         });
         if (cancelled) { gestureRecognizer.close(); gestureRecognizer = null; return; }
 
@@ -1302,7 +1360,7 @@ export function GraphBattlePanel({
 
       runtimeVideo.srcObject = null;
     };
-  }, []);
+  }, [primaryHand, primaryHandReady, sessionReady]);
 
   // Frame streaming: capture composite frames and send to opponent via socket
   useEffect(() => {
@@ -1406,6 +1464,11 @@ export function GraphBattlePanel({
           <h2>{solo ? "Trace the equation to score points" : "Trace the equation to cast damage"}</h2>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {primaryHand ? (
+            <span className={styles.state}>
+              Tracking {formatPrimaryHandLabel(primaryHand)}
+            </span>
+          ) : null}
           {solo && soloSkillFamily ? (
             <span className={styles.state}>
               {formatSkillFamilyLabel(soloSkillFamily)}
@@ -1424,7 +1487,11 @@ export function GraphBattlePanel({
                     await v.play();
                     setCameraBlocked(false);
                     setLocalError("");
-                    setTrackingStatus("Camera connected. Draw with your index finger, then hold an open palm to grade.");
+                    setTrackingStatus(
+                      primaryHand
+                        ? `Tracking your ${formatPrimaryHandLabel(primaryHand).toLowerCase()}. Draw with your index finger, then hold an open palm to grade.`
+                        : "Camera connected. Choose your primary hand to start tracking.",
+                    );
                   }
                 } catch {
                   setLocalError("Camera access was denied. Check your browser permissions and try again.");
@@ -1440,113 +1507,164 @@ export function GraphBattlePanel({
         </div>
       </div>
 
-      <div className={solo ? styles.cvBattleLayoutSolo : styles.cvBattleLayout}>
-        <div ref={containerRef} className={styles.cvContainer}>
-          <video ref={videoRef} className={styles.cvVideo} autoPlay muted playsInline />
-          <canvas
-            ref={gridRef}
-            className={styles.cvGrid}
-            width={DRAW_WIDTH}
-            height={DRAW_HEIGHT}
-          />
-          <canvas
-            ref={drawingRef}
-            className={styles.cvDrawing}
-            width={DRAW_WIDTH}
-            height={DRAW_HEIGHT}
-          />
-          <canvas
-            ref={overlayRef}
-            className={styles.cvOverlay}
-            width={DRAW_WIDTH}
-            height={DRAW_HEIGHT}
-          />
-        </div>
+      {!sessionReady || !primaryHandReady || !primaryHand ? (
+        <div className={styles.panel}>
+          <p className={styles.label}>Primary hand required</p>
+          <h2>Which hand should Arcanagraph track?</h2>
+          <p className={styles.muted}>
+            {sessionReady
+              ? sessionUser
+                ? "We will save this to your player profile and ignore input from the other hand until you change it."
+                : "We will save this in this browser and ignore input from the other hand until you change it."
+              : "Loading where your hand preference should be stored..."}
+          </p>
+          <div className={styles.links}>
+            {(["Left", "Right"] as const).map((option) => {
+              const isSelected = primaryHand === option;
 
-        {solo ? (
-          <div
-            className={styles.cvEquation}
-            dangerouslySetInnerHTML={{
-              __html:
-                equationMarkup ||
-                katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
-            }}
-          />
-        ) : (
-          <div className={styles.cvSideColumn}>
-            <div ref={opponentContainerRef} className={styles.cvOpponent}>
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className={isSelected ? styles.attackButton : styles.linkButton}
+                  onClick={() => void savePrimaryHand(option)}
+                  disabled={!sessionReady || savingPrimaryHand}
+                >
+                  {savingPrimaryHand && isSelected
+                    ? "Saving..."
+                    : isSelected
+                      ? `${formatPrimaryHandLabel(option)} selected`
+                      : `Use ${formatPrimaryHandLabel(option)}`}
+                </button>
+              );
+            })}
+            <Link className={styles.linkButton} href="/settings">
+              Open settings
+            </Link>
+          </div>
+          {sessionReady ? (
+            <p className={styles.muted}>
+              {primaryHandSource === "profile"
+                ? "Your player profile already has a saved hand preference."
+                : primaryHandSource === "local"
+                  ? "A local hand choice was found and will be reused here."
+                  : "No hand preference is saved yet."}
+            </p>
+          ) : null}
+          {primaryHandError ? <p className={styles.error}>{primaryHandError}</p> : null}
+        </div>
+      ) : (
+        <>
+          <div className={solo ? styles.cvBattleLayoutSolo : styles.cvBattleLayout}>
+            <div ref={containerRef} className={styles.cvContainer}>
+              <video ref={videoRef} className={styles.cvVideo} autoPlay muted playsInline />
               <canvas
-                ref={opponentCanvasRef}
-                width={320}
-                height={240}
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  borderRadius: 12,
-                  background: "#0a0a1a",
-                  display: "block",
-                }}
+                ref={gridRef}
+                className={styles.cvGrid}
+                width={DRAW_WIDTH}
+                height={DRAW_HEIGHT}
               />
-              <div className={styles.cvOpponentCard}>
-                {selectedOpponent ? (
-                  <>
-                    <strong>{formatPlayerName(selectedOpponent)}</strong>
-                    <div className={styles.healthTrack} aria-hidden="true">
-                      <div className={styles.healthFill} style={{ width: `${selectedOpponentHealth}%` }} />
-                    </div>
-                  </>
-                ) : (
-                  <span className={styles.meta}>Pick an opponent from the player list.</span>
-                )}
-              </div>
+              <canvas
+                ref={drawingRef}
+                className={styles.cvDrawing}
+                width={DRAW_WIDTH}
+                height={DRAW_HEIGHT}
+              />
+              <canvas
+                ref={overlayRef}
+                className={styles.cvOverlay}
+                width={DRAW_WIDTH}
+                height={DRAW_HEIGHT}
+              />
             </div>
 
-            <div
-              className={styles.cvEquation}
-              dangerouslySetInnerHTML={{
-                __html:
-                  equationMarkup ||
-                  katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
-              }}
-            />
+            {solo ? (
+              <div
+                className={styles.cvEquation}
+                dangerouslySetInnerHTML={{
+                  __html:
+                    equationMarkup ||
+                    katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
+                }}
+              />
+            ) : (
+              <div className={styles.cvSideColumn}>
+                <div ref={opponentContainerRef} className={styles.cvOpponent}>
+                  <canvas
+                    ref={opponentCanvasRef}
+                    width={320}
+                    height={240}
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      borderRadius: 12,
+                      background: "#0a0a1a",
+                      display: "block",
+                    }}
+                  />
+                  <div className={styles.cvOpponentCard}>
+                    {selectedOpponent ? (
+                      <>
+                        <strong>{formatPlayerName(selectedOpponent)}</strong>
+                        <div className={styles.healthTrack} aria-hidden="true">
+                          <div className={styles.healthFill} style={{ width: `${selectedOpponentHealth}%` }} />
+                        </div>
+                      </>
+                    ) : (
+                      <span className={styles.meta}>Pick an opponent from the player list.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className={styles.cvEquation}
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      equationMarkup ||
+                      katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
+                  }}
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <canvas ref={attackCanvasRef} className={styles.cvAttackCanvas} />
+          <canvas ref={attackCanvasRef} className={styles.cvAttackCanvas} />
 
-      <div className={styles.cvControls}>
-        <div className={styles.cvControlGroup}>
-          <button
-            type="button"
-            className={styles.linkButton}
-            onClick={() => {
-              setLocalError("");
-              resetSessionRef.current();
-            }}
-          >
-            Clear
-          </button>
-          <button
-            type="button"
-            className={styles.linkButton}
-            onClick={() => {
-              setLocalError("");
-              nextEquationRef.current();
-            }}
-          >
-            New Equation
-          </button>
-        </div>
-        <span className={styles.scoreDisplay}>{scoreDisplay || "Score: waiting for trace"}</span>
-      </div>
+          <div className={styles.cvControls}>
+            <div className={styles.cvControlGroup}>
+              <button
+                type="button"
+                className={styles.linkButton}
+                onClick={() => {
+                  setLocalError("");
+                  resetSessionRef.current();
+                }}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                className={styles.linkButton}
+                onClick={() => {
+                  setLocalError("");
+                  nextEquationRef.current();
+                }}
+              >
+                New Equation
+              </button>
+            </div>
+            <span className={styles.scoreDisplay}>{scoreDisplay || "Score: waiting for trace"}</span>
+          </div>
 
-      <p className={styles.muted}>
-        {solo && isSoloGuestPlayer(currentPlayer)
-          ? `${trackingStatus} Practicing as ${formatPlayerName(currentPlayer)}.`
-          : `${trackingStatus} Signed in as ${formatPlayerName(currentPlayer)}.`}
-      </p>
-      {localError ? <p className={styles.error}>{localError}</p> : null}
+          <p className={styles.muted}>
+            {solo && isSoloGuestPlayer(currentPlayer)
+              ? `${trackingStatus} Practicing as ${formatPlayerName(currentPlayer)}.`
+              : `${trackingStatus} Signed in as ${formatPlayerName(currentPlayer)}.`}
+          </p>
+          {primaryHandError ? <p className={styles.error}>{primaryHandError}</p> : null}
+          {localError ? <p className={styles.error}>{localError}</p> : null}
+        </>
+      )}
     </section>
   );
 }

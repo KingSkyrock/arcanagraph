@@ -14,6 +14,7 @@ import {
   getFirebaseAuth,
   getFirebaseClientSummary,
 } from "@/lib/firebase-client";
+import { emitSessionUserUpdated } from "@/lib/session-user-events";
 import type { AppUser } from "@/lib/types";
 import styles from "./page.module.css";
 
@@ -109,6 +110,7 @@ export function LoginForm() {
 
       if (response.status === 401) {
         setUser(null);
+        emitSessionUserUpdated(null);
         setStatus("No active match session yet.");
         return;
       }
@@ -120,9 +122,11 @@ export function LoginForm() {
       }
 
       setUser(payload.user);
+      emitSessionUserUpdated(payload.user);
       setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
     } catch (loadError) {
       console.error(loadError);
+      emitSessionUserUpdated(null);
       setStatus("Backend unavailable. Start Express and Postgres first.");
     }
   }
@@ -214,6 +218,7 @@ export function LoginForm() {
       }
 
       setUser(payload.user);
+      emitSessionUserUpdated(payload.user);
       setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
       router.push("/");
     } catch (submitError) {
@@ -250,6 +255,7 @@ export function LoginForm() {
       }
 
       setUser(null);
+      emitSessionUserUpdated(null);
       setStatus("Signed out. Ready for another player.");
     } catch (logoutError) {
       console.error(logoutError);

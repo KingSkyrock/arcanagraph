@@ -31,6 +31,8 @@ import {
   pingDatabase,
   restartLobbyMatch,
   startLobbyGame,
+  updateUserProfilePicture,
+  updateUserPrimaryHand,
   updateLobbyPlayerReady,
 } from "./db";
 
@@ -106,6 +108,28 @@ function parseCookies(cookieHeader?: string) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function requirePrimaryHand(value: unknown) {
+  if (value === "Left" || value === "Right") {
+    return value;
+  }
+
+  throw Object.assign(
+    new Error("Choose Left or Right as your primary hand."),
+    { statusCode: 400 },
+  );
+}
+
+function requireProfilePictureId(value: unknown) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  throw Object.assign(
+    new Error("Choose one of the available profile pictures."),
+    { statusCode: 400 },
+  );
 }
 
 async function requireSessionUser(
@@ -215,6 +239,50 @@ function createApp() {
     }
 
     response.json({ user });
+  });
+
+  app.put("/api/settings/hand", async (request, response) => {
+    const user = await requireSessionUser(request, response);
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const primaryHand = requirePrimaryHand(request.body?.primaryHand);
+      const updatedUser = await updateUserPrimaryHand(user.id, primaryHand);
+      response.json({ user: updatedUser });
+    } catch (error) {
+      console.error("Failed to update primary hand", error);
+      response.status(getStatusCode(error)).json({
+        error: getErrorMessage(
+          error,
+          "Could not update your hand-tracking preference.",
+        ),
+      });
+    }
+  });
+
+  app.put("/api/settings/profile-picture", async (request, response) => {
+    const user = await requireSessionUser(request, response);
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const profilePictureId = requireProfilePictureId(request.body?.profilePictureId);
+      const updatedUser = await updateUserProfilePicture(user.id, profilePictureId);
+      response.json({ user: updatedUser });
+    } catch (error) {
+      console.error("Failed to update profile picture", error);
+      response.status(getStatusCode(error)).json({
+        error: getErrorMessage(
+          error,
+          "Could not update your profile picture.",
+        ),
+      });
+    }
   });
 
   app.get("/api/leaderboard", async (request, response) => {

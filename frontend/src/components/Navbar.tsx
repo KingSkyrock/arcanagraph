@@ -6,14 +6,25 @@ import Image from 'next/image';
 import { signOut } from 'firebase/auth';
 import { apiUrl } from '@/lib/api';
 import { firebaseConfigReady, getFirebaseAuth } from '@/lib/firebase-client';
+import {
+  getDefaultProfilePicture,
+  getProfilePictureById,
+  loadProfilePictureCatalog,
+  type ProfilePictureCatalogEntry,
+} from '@/lib/profile-pictures';
+import {
+  emitSessionUserUpdated,
+  subscribeToSessionUserUpdates,
+} from '@/lib/session-user-events';
+import type { AppUser } from '@/lib/types';
 
-type SessionUser = { id: string; displayName?: string; email?: string } | null;
+type SessionUser = Pick<AppUser, 'id' | 'displayName' | 'email' | 'profilePictureId'> | null;
 type NavLink = { label: string; href: string };
 
 const NAV_LINKS: NavLink[] = [
   { label: 'Play Now', href: '/play' },
   { label: 'About', href: '/about' },
-  { label: 'Contact', href: '#' },
+  { label: 'Settings', href: '/settings' },
 ];
 
 export default function Navbar() {
@@ -21,6 +32,13 @@ export default function Navbar() {
   const [user, setUser] = useState<SessionUser>(null);
   const [checked, setChecked] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [profilePictures, setProfilePictures] = useState<ProfilePictureCatalogEntry[]>([]);
+
+  useEffect(() => {
+    loadProfilePictureCatalog()
+      .then(setProfilePictures)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch(apiUrl('/api/auth/me'), { credentials: 'include' })
@@ -30,6 +48,18 @@ export default function Navbar() {
       .finally(() => setChecked(true));
   }, []);
 
+  useEffect(() => {
+    return subscribeToSessionUserUpdates(updatedUser => {
+      setUser(updatedUser);
+      setChecked(true);
+    });
+  }, []);
+
+  const selectedProfilePicture =
+    getProfilePictureById(profilePictures, user?.profilePictureId) ??
+    getDefaultProfilePicture(profilePictures);
+  const playerLabel = user?.displayName || user?.email || 'Player';
+
   async function handleLogout() {
     setLoggingOut(true);
     try {
@@ -38,6 +68,7 @@ export default function Navbar() {
         await signOut(getFirebaseAuth());
       }
       setUser(null);
+      emitSessionUserUpdated(null);
       router.push('/');
     } catch (e) {
       console.error('Logout failed', e);
@@ -140,39 +171,107 @@ export default function Navbar() {
 
         {checked && (
           user ? (
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              style={{
-                textDecoration: 'none',
-                background: 'rgba(255,255,255,0.12)',
-                color: '#fff',
-                borderRadius: 50,
-                padding: '10px 28px',
-                fontWeight: 700,
-                fontSize: 15,
-                cursor: loggingOut ? 'wait' : 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                fontFamily: "'Nunito', system-ui, sans-serif",
-                letterSpacing: '0.5px',
-                border: '1.5px solid rgba(255,255,255,0.24)',
-                boxShadow: 'none',
-                transition: 'transform 0.18s ease-out, background 0.15s',
-                opacity: loggingOut ? 0.6 : 1,
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
-                e.currentTarget.style.transform = 'scale(1) translateY(0)';
-              }}
-            >
-              {loggingOut ? 'SIGNING OUT...' : 'SIGN OUT'}
-            </button>
+            <>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '6px 10px 6px 6px',
+                  borderRadius: 999,
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    position: 'relative',
+                    width: 42,
+                    height: 42,
+                    overflow: 'hidden',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    flexShrink: 0,
+                  }}
+                >
+                  {selectedProfilePicture ? (
+                    <Image
+                      src={selectedProfilePicture.imagePath}
+                      alt={`${playerLabel} avatar`}
+                      fill
+                      sizes="42px"
+                      style={{ objectFit: 'cover' }}
+                    />
+                  ) : null}
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: 2,
+                    minWidth: 0,
+                  }}
+                >
+                  <strong
+                    style={{
+                      maxWidth: 180,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: '#fff',
+                      fontSize: 14,
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    {playerLabel}
+                  </strong>
+                  <span
+                    style={{
+                      color: 'rgba(255,255,255,0.68)',
+                      fontSize: 12,
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    Familiar equipped
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                style={{
+                  textDecoration: 'none',
+                  background: 'rgba(255,255,255,0.12)',
+                  color: '#fff',
+                  borderRadius: 50,
+                  padding: '10px 28px',
+                  fontWeight: 700,
+                  fontSize: 15,
+                  cursor: loggingOut ? 'wait' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontFamily: "'Nunito', system-ui, sans-serif",
+                  letterSpacing: '0.5px',
+                  border: '1.5px solid rgba(255,255,255,0.24)',
+                  boxShadow: 'none',
+                  transition: 'transform 0.18s ease-out, background 0.15s',
+                  opacity: loggingOut ? 0.6 : 1,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                  e.currentTarget.style.transform = 'scale(1.02) translateY(-1px)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                  e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                }}
+              >
+                {loggingOut ? 'SIGNING OUT...' : 'SIGN OUT'}
+              </button>
+            </>
           ) : (
             <Link
               href="/login"

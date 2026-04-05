@@ -144,6 +144,7 @@ export function GameClient({ lobbyId }: GameClientProps) {
   const socketRef = useRef<Socket | null>(null);
   const [socketConnected, setSocketConnected] = useState(false);
   const [user, setUser] = useState<AppUser | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
   const [lobby, setLobby] = useState<Lobby | null>(null);
   const [status, setStatus] = useState("Loading match room...");
   const [error, setError] = useState("");
@@ -185,6 +186,10 @@ export function GameClient({ lobbyId }: GameClientProps) {
           setError(
             loadError instanceof Error ? loadError.message : "Could not load your session.",
           );
+        }
+      } finally {
+        if (!cancelled) {
+          setSessionReady(true);
         }
       }
     };
@@ -453,6 +458,9 @@ export function GameClient({ lobbyId }: GameClientProps) {
             <Link className={styles.linkButton} href={`/play?lobby=${lobbyId}`}>
               Back to lobby
             </Link>
+            <Link className={styles.linkButton} href="/settings">
+              Hand settings
+            </Link>
             <Link className={styles.linkButton} href="/">
               Home
             </Link>
@@ -512,6 +520,8 @@ export function GameClient({ lobbyId }: GameClientProps) {
             opponents={opponents}
             selectedTargetId={selectedTargetId}
             disabled={!canAttack}
+            sessionUser={user}
+            sessionReady={sessionReady}
             onSuccessfulScore={handleGraphAttack}
             socket={socketRef.current}
             lobbyId={lobbyId}
