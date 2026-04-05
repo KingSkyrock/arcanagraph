@@ -79,30 +79,36 @@ export default function Navbar() {
             {label}
           </Link>
         ))}
-
-        <button style={{
-          background: '#f59e0b', 
-          color: '#fff', 
-          border: 'none',
-          borderRadius: 50, 
-          padding: '11px 32px',
-          fontWeight: 800, 
-          fontSize: 15, 
-          cursor: 'pointer',
-          fontFamily: "'Nunito', system-ui, sans-serif",
-          letterSpacing: '0.4px',
-          boxShadow: '0 6px 20px rgba(245,158,11,0.55), 0 2px 8px rgba(0,0,0,0.3)',
-          transition: 'background 0.15s, transform 0.15s, box-shadow 0.15s',
-        }}
+        
+        <button
+          style={{
+            textDecoration: 'none',
+            background: '#f59e0b', // Amber background
+            color: '#fff',
+            borderRadius: 50,
+            padding: '12px 32px', // Slightly smaller padding for a Navbar
+            fontWeight: 800,
+            fontSize: 16,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            fontFamily: "'Nunito', system-ui, sans-serif",
+            letterSpacing: '0.5px',
+            border: 'none',
+            // The "Lego" Hard Shadow
+            boxShadow: '0 4px 0px #b45309, 0 4px 12px rgba(0,0,0,0.2)',
+            transition: 'transform 0.18s ease-out, box-shadow 0.18s, background 0.15s',
+          }}
           onMouseEnter={e => {
+            e.currentTarget.style.transform = 'scale(1.02) translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 0px #b45309, 0 8px 16px rgba(0,0,0,0.2)';
             e.currentTarget.style.background = '#d97706';
-            e.currentTarget.style.transform = 'scale(1.05) translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 10px 28px rgba(245,158,11,0.65), 0 4px 12px rgba(0,0,0,0.3)';
           }}
           onMouseLeave={e => {
-            e.currentTarget.style.background = '#f59e0b';
             e.currentTarget.style.transform = 'scale(1) translateY(0)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(245,158,11,0.55), 0 2px 8px rgba(0,0,0,0.3)';
+            e.currentTarget.style.boxShadow = '0 4px 0px #b45309, 0 4px 12px rgba(0,0,0,0.2)';
+            e.currentTarget.style.background = '#f59e0b';
           }}
         >
           SIGN IN

@@ -124,17 +124,18 @@ function HeroSection() {
             gap: 12,
             fontFamily: "'Nunito', system-ui, sans-serif",
             letterSpacing: '0.5px',
-            boxShadow: '0 8px 28px rgba(245,158,11,0.6), 0 3px 10px rgba(0,0,0,0.25)',
+            boxShadow: '0 4px 0px #b45309, 0 4px 12px rgba(0,0,0,0.2)',
             transition: 'transform 0.18s ease-out, box-shadow 0.18s, background 0.15s',
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 14px 36px rgba(245,158,11,0.7), 0 6px 16px rgba(0,0,0,0.3)';
+            e.currentTarget.style.transform = 'scale(1.02) translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 0px #b45309, 0 8px 16px rgba(0,0,0,0.2)';
             e.currentTarget.style.background = '#d97706';
           }}
           onMouseLeave={e => {
             e.currentTarget.style.transform = 'scale(1) translateY(0)';
-            e.currentTarget.style.boxShadow = '0 8px 28px rgba(245,158,11,0.6), 0 3px 10px rgba(0,0,0,0.25)';
+            // Reset to the non-glowy shadow
+            e.currentTarget.style.boxShadow = '0 4px 0px #b45309, 0 4px 12px rgba(0,0,0,0.2)';
             e.currentTarget.style.background = '#f59e0b';
           }}
         >
