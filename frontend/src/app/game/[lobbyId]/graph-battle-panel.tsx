@@ -1073,7 +1073,6 @@ export function GraphBattlePanel({
       overlayContext.beginPath();
       overlayContext.arc(x, y, 8, 0, Math.PI * 2);
       overlayContext.fill();
-      }
     }
 
     async function startCamera() {
