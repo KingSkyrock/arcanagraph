@@ -496,19 +496,6 @@ export function GameClient({ lobbyId }: GameClientProps) {
           </div>
 
           {lastActionMessage ? <p className={styles.muted}>{lastActionMessage}</p> : null}
-          {resultMessage ? <p className={styles.result}>{resultMessage}</p> : null}
-          {lobby?.match?.status === "finished" ? (
-            <div className={styles.resultActions}>
-              <button
-                type="button"
-                className={styles.linkButton}
-                onClick={() => void handlePlayAgain()}
-                disabled={restartingMatch}
-              >
-                {restartingMatch ? "Resetting lobby..." : "Play Again"}
-              </button>
-            </div>
-          ) : null}
           {error ? <p className={styles.error}>{error}</p> : null}
           {currentPlayer ? (
             <p className={styles.muted}>
@@ -524,6 +511,7 @@ export function GameClient({ lobbyId }: GameClientProps) {
             opponents={opponents}
             selectedTargetId={selectedTargetId}
             disabled={!canAttack}
+            category={(lobby?.settings?.difficulty === 'beginner' ? 'beginner' : lobby?.settings?.difficulty === 'advanced' ? 'advanced' : null) as "beginner" | "advanced" | null}
             sessionUser={user}
             sessionReady={sessionReady}
             onSuccessfulScore={handleGraphAttack}
@@ -612,6 +600,40 @@ export function GameClient({ lobbyId }: GameClientProps) {
           )}
         </div>
       </section>
+
+      {lobby?.match?.status === "finished" ? (
+        <div className={styles.victoryOverlay}>
+          <div className={styles.victoryCard}>
+            <h1 className={styles.victoryTitle} style={{
+              color: lobby.match.winnerUserId === user?.id ? "#33ff33" : "#ff4d4d",
+            }}>
+              {lobby.match.winnerUserId === user?.id ? "VICTORY" : "DEFEAT"}
+            </h1>
+            <p className={styles.victorySubtitle}>
+              {getResultMessage(lobby, user?.id ?? null)}
+            </p>
+            {lastActionMessage ? (
+              <p className={styles.muted} style={{ textAlign: "center" }}>{lastActionMessage}</p>
+            ) : null}
+            <div className={styles.resultActions} style={{ justifyContent: "center", marginTop: 12 }}>
+              {lobby.hostUserId === user?.id ? (
+                <button
+                  type="button"
+                  className={styles.attackButton}
+                  onClick={() => void handlePlayAgain()}
+                  disabled={restartingMatch}
+                >
+                  {restartingMatch ? "Resetting..." : "Play Again"}
+                </button>
+              ) : null}
+              <Link className={styles.linkButton} href="/play">
+                Leave Match
+              </Link>
+            </div>
+            {error ? <p className={styles.error} style={{ textAlign: "center" }}>{error}</p> : null}
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

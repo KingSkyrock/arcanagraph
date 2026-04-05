@@ -1026,9 +1026,14 @@ export async function startLobbyGame(lobbyId: string, hostUserId: string) {
       }
 
       const lobby = await readLobby(client, validLobbyId);
+      const customMaxHealth = typeof lobby.settings.maxHealth === "number" && lobby.settings.maxHealth > 0
+        ? Math.round(lobby.settings.maxHealth)
+        : undefined;
       const nextSettings = {
         ...lobby.settings,
-        match: createInitialMatch(lobby.players.map((player) => player.userId)),
+        match: createInitialMatch(lobby.players.map((player) => player.userId), {
+          maxHealth: customMaxHealth,
+        }),
       };
 
       await client.query(

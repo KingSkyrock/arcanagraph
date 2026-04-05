@@ -31,7 +31,10 @@ import {
 type EquationFilters = {
   difficulty?: string;
   skillFamily?: string | null;
+  category?: "beginner" | "advanced" | null;
 };
+
+const BEGINNER_SKILL_FAMILIES = ["linear", "quadratic", "absolute_value"];
 
 export function formatSkillFamilyLabel(skillFamily: string) {
   return skillFamily
@@ -53,6 +56,11 @@ export function filterEquationFamilies(
   options: EquationFilters = {},
 ) {
   return families.filter((family) => {
+    if (options.category === "beginner") {
+      if (family.difficulty !== "easy") return false;
+      if (!BEGINNER_SKILL_FAMILIES.includes(family.skill_family)) return false;
+    }
+
     if (options.difficulty && family.difficulty !== options.difficulty) {
       return false;
     }

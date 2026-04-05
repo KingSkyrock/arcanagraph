@@ -8,7 +8,13 @@
       "Bash(ls /Users/lukewang/Documents/dev/arcanagraph/frontend/src/app/game/[lobbyId]/)",
       "Bash(ln -sf ../../shared src/shared)",
       "Bash(node -e ':*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(ssh root@64.23.190.70 \"ls /root/srv/arcanagraph/ 2>/dev/null || echo 'no repo'; which pm2 2>/dev/null || echo 'no pm2'; ls /root/.nvm/versions/node/ 2>/dev/null || echo 'no nvm'; cat /etc/apache2/sites-enabled/ 2>/dev/null; apache2 -v 2>/dev/null | head -1\")",
+      "Bash(ssh root@64.23.190.70 'export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; node --version && npm --version && ls /root/srv/arcanagraph/ops/ 2>/dev/null && echo \"---\" && cat /etc/apache2/sites-available/arcanagraph.conf 2>/dev/null || echo \"no vhost\" && echo \"---\" && ls /root/srv/arcanagraph/frontend/node_modules/.package-lock.json 2>/dev/null || echo \"no frontend node_modules\" && echo \"---\" && ls /root/srv/arcanagraph/backend/.env 2>/dev/null || echo \"no backend env\" && echo \"---\" && cat /root/srv/arcanagraph/frontend/.env.production 2>/dev/null || echo \"no frontend env.production\" && echo \"---\" && which certbot 2>/dev/null || echo \"no certbot\" && echo \"---\" && dig +short arcanagraph.tech 2>/dev/null || echo \"no dig\"')",
+      "Bash(ssh root@64.23.190.70 'cat /root/srv/arcanagraph/ops/pm2/ecosystem.config.cjs && echo \"===\" && cat /root/srv/arcanagraph/ops/apache/arcanagraph.conf 2>/dev/null && echo \"===\" && cat /root/srv/arcanagraph/ops/apache/arcanagraph-ssl.conf 2>/dev/null && echo \"===\" && ls /root/srv/arcanagraph/.github/workflows/ 2>/dev/null || echo \"no workflows\"')",
+      "Bash(ssh root@64.23.190.70 ':*)",
+      "Bash(grep -n \"centerX\\\\|centerY\\\\|pxPerUnit\" /Users/lukewang/Documents/dev/arcanagraph/frontend/src/app/game/[lobbyId]/graph-battle.ts)",
+      "Bash(grep -n \"tracked\\\\|duplicate\\\\|hand\" /Users/lukewang/Documents/dev/arcanagraph/frontend/src/app/game/[lobbyId]/graph-battle-panel.tsx)"
     ]
   }
 }

@@ -48,6 +48,7 @@ export function SoloGameClient() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const selectedSkillFamily = searchParams.get("skillFamily");
+  const selectedCategory = searchParams.get("category") as "beginner" | "advanced" | null;
   const selectedSkillFamilyLabel = selectedSkillFamily
     ? formatSkillFamilyLabel(selectedSkillFamily)
     : null;
@@ -124,6 +125,7 @@ export function SoloGameClient() {
           disabled={true}
           solo
           soloSkillFamily={selectedSkillFamily}
+          category={selectedCategory}
           sessionUser={user}
           sessionReady={sessionReady}
           onSuccessfulScore={async () => undefined}

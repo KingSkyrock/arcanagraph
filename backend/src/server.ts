@@ -15,6 +15,7 @@ import {
 import { scoreDrawing, type ScoreResult } from "../../shared/graph-scoring";
 import type { SerializableEquation } from "../../shared/graph-scoring";
 import {
+  advanceRound,
   assignEquation,
   clearAssignment,
   clearLobby,
@@ -496,6 +497,8 @@ function registerLobbySockets(io: SocketIOServer) {
 
           // Invalidate the assignment so this equation can't be resubmitted
           clearAssignment(lobbyId, user.id);
+          // Advance to a new family for the next round
+          advanceRound(lobbyId);
 
           const result = scoreDrawing(trails, equationConfig);
           const lobby = await attackLobbyPlayer(

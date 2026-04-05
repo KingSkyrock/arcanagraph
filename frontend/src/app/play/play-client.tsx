@@ -50,6 +50,7 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
   const activeLobbyId = searchParams.get("lobby");
   const socketRef = useRef<Socket | null>(null);
   const autoActionDone = useRef(false);
+  const activeLobbyIdRef = useRef(activeLobbyId);
   const [socketConnected, setSocketConnected] = useState(false);
   const [user, setUser] = useState<AppUser | null>(null);
   const [lobby, setLobby] = useState<Lobby | null>(null);
@@ -61,6 +62,10 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
   useEffect(() => {
     void loadSession();
   }, []);
+
+  useEffect(() => {
+    activeLobbyIdRef.current = activeLobbyId;
+  }, [activeLobbyId]);
 
   useEffect(() => {
     if (!user) {
@@ -108,13 +113,13 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
     });
 
     socket.on("game:starting", ({ lobbyId }: { lobbyId: string }) => {
-      if (lobbyId === activeLobbyId) {
+      if (lobbyId === activeLobbyIdRef.current) {
         setStatus("Everyone is ready. Spinning up the match...");
       }
     });
 
     socket.on("game:started", ({ lobbyId, route }: { lobbyId: string; route: string }) => {
-      if (lobbyId === activeLobbyId) {
+      if (lobbyId === activeLobbyIdRef.current) {
         router.push(route);
       }
     });
@@ -126,7 +131,7 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
       socketRef.current = null;
       setSocketConnected(false);
     };
-  }, [activeLobbyId, router, user]);
+  }, [router, user]);
 
   useEffect(() => {
     if (!user || !activeLobbyId) {
@@ -271,6 +276,7 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
             mode: "trace-duel",
             curriculum: "default",
             difficulty: difficulty || "advanced",
+            maxHealth: 40, // Debug: 2 hits to win. Remove for production.
           },
         }),
       });

@@ -42,6 +42,7 @@ type GraphBattlePanelProps = {
   sessionReady?: boolean;
   solo?: boolean;
   soloSkillFamily?: string | null;
+  category?: "beginner" | "advanced" | null;
   onSuccessfulScore: (targetUserId: string, trails: Record<string, unknown>) => Promise<{ total: number; shape: number; position: number } | undefined>;
   socket?: Socket | null;
   lobbyId?: string;
@@ -121,6 +122,7 @@ export function GraphBattlePanel({
   sessionReady = false,
   solo = false,
   soloSkillFamily = null,
+  category = null,
   onSuccessfulScore,
   socket,
   lobbyId,
@@ -142,6 +144,7 @@ export function GraphBattlePanel({
   const onSuccessfulScoreRef = useRef(onSuccessfulScore);
   const soloRef = useRef(solo);
   const soloSkillFamilyRef = useRef<string | null>(soloSkillFamily);
+  const categoryRef = useRef<"beginner" | "advanced" | null>(category);
   const resetSessionRef = useRef<() => void>(() => undefined);
   const reinitCameraRef = useRef<() => void>(() => undefined);
   const nextEquationRef = useRef<() => void>(() => undefined);
@@ -203,6 +206,10 @@ export function GraphBattlePanel({
   useEffect(() => {
     soloSkillFamilyRef.current = soloSkillFamily;
   }, [soloSkillFamily]);
+
+  useEffect(() => {
+    categoryRef.current = category;
+  }, [category]);
 
   useEffect(() => {
     if (!solo || !familiesRef.current.length) {
@@ -554,24 +561,23 @@ export function GraphBattlePanel({
         return;
       }
 
-      // Solo mode: pick locally with skill family filter
+      // Pick locally with category/skill family filter
       const families = familiesRef.current;
 
       if (!families.length) {
         return;
       }
 
-      const filteredFamilies = soloRef.current
-        ? filterEquationFamilies(families, {
-            skillFamily: soloSkillFamilyRef.current,
-          })
-        : families;
+      const filteredFamilies = filterEquationFamilies(families, {
+        skillFamily: soloSkillFamilyRef.current,
+        category: categoryRef.current,
+      });
 
       if (!filteredFamilies.length) {
         setLocalError(
           soloSkillFamilyRef.current
             ? `No graph equations are available for ${formatSkillFamilyLabel(soloSkillFamilyRef.current)} yet.`
-            : "No graph equations are available right now.",
+            : "No equations available for this difficulty.",
         );
         return;
       }

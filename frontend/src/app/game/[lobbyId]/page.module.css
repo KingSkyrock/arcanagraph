@@ -605,6 +605,41 @@
   align-items: center;
 }
 
+.victoryOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 11, 36, 0.85);
+  backdrop-filter: blur(12px);
+}
+
+.victoryCard {
+  display: grid;
+  gap: 16px;
+  padding: 48px;
+  text-align: center;
+  max-width: 520px;
+  width: 100%;
+}
+
+.victoryTitle {
+  font-family: "Impact", "Arial Black", "Oswald", system-ui, sans-serif;
+  font-size: clamp(64px, 12vw, 120px);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 40px currentColor, 0 0 80px currentColor;
+}
+
+.victorySubtitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+}
+
 @media (max-width: 900px) {
   .summaryGrid {
     grid-template-columns: 1fr;

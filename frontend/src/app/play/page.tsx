@@ -63,11 +63,14 @@ export default function PlayPage() {
     }
   }, []);
 
-  function goToSolo(skillFamily?: string) {
+  function goToSolo(options?: { skillFamily?: string; category?: string }) {
     const params = new URLSearchParams();
 
-    if (skillFamily) {
-      params.set('skillFamily', skillFamily);
+    if (options?.skillFamily) {
+      params.set('skillFamily', options.skillFamily);
+    }
+    if (options?.category) {
+      params.set('category', options.category);
     }
 
     router.push(params.size ? `/game/solo?${params.toString()}` : '/game/solo');
@@ -358,7 +361,8 @@ export default function PlayPage() {
                 onMouseDown={e => handleMouseDown(e, 'rgb(21, 128, 61)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
                 onClick={() => { if (mode === 'battle') { setDifficulty('shapes'); setStep('lobby'); } else goToSolo(); }}
-              >Shapes</button>
+                disabled
+              >Shapes (coming soon)</button>
 
               <button
                 style={getLegoStyle('rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}
@@ -366,7 +370,7 @@ export default function PlayPage() {
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(180, 83, 9)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(180, 83, 9)', true, 'rgb(217, 119, 6)')}
-                onClick={() => { if (mode === 'battle') { setDifficulty('beginner'); setStep('lobby'); } else goToSolo(); }}
+                onClick={() => { if (mode === 'battle') { setDifficulty('beginner'); setStep('lobby'); } else goToSolo({ category: 'beginner' }); }}
               >Beginner Functions</button>
 
               <button
@@ -375,7 +379,7 @@ export default function PlayPage() {
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(239, 104, 104)', 'rgb(185, 28, 28)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(185, 28, 28)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(185, 28, 28)', true, 'rgb(220, 38, 38)')}
-                onClick={() => { if (mode === 'battle') { setDifficulty('advanced'); setStep('lobby'); } else goToSolo(); }}
+                onClick={() => { if (mode === 'battle') { setDifficulty('advanced'); setStep('lobby'); } else goToSolo({ category: 'advanced' }); }}
               >Advanced Functions</button>
             </div>
 
@@ -387,7 +391,7 @@ export default function PlayPage() {
               onMouseLeave={e => handleMouseLeave(e, 'rgb(162, 28, 175)', 'rgb(112, 26, 117)', true)}
               onMouseDown={e => handleMouseDown(e, 'rgb(112, 26, 117)')}
               onMouseUp={e => handleMouseEnter(e, 'rgb(112, 26, 117)', true, 'rgb(134, 25, 143)')}
-              onClick={() => { if (mode === 'battle') { setDifficulty('custom'); setStep('lobby'); } else void openCustomSolo(); }}
+              onClick={() => void openCustomSolo()}
               disabled={customLoading}
             >{customLoading ? 'Loading...' : 'Custom'}</button>
 
@@ -429,7 +433,9 @@ export default function PlayPage() {
               lineHeight: 1.6,
               marginBottom: 28,
             }}>
-              Custom solo practice will only pull equations from the skill family you choose here.
+              {mode === 'battle'
+                ? 'Choose a skill family for your lobby. Both players will get equations from this category.'
+                : 'Custom practice will only pull equations from the skill family you choose here.'}
             </p>
 
             <div style={{
@@ -460,7 +466,14 @@ export default function PlayPage() {
                     onMouseLeave={e => handleMouseLeave(e, bg, shadow, true)}
                     onMouseDown={e => handleMouseDown(e, shadow)}
                     onMouseUp={e => handleMouseEnter(e, shadow, true, hoverBg)}
-                    onClick={() => goToSolo(family.id)}
+                    onClick={() => {
+                      if (mode === 'battle') {
+                        setDifficulty(family.id);
+                        setStep('lobby');
+                      } else {
+                        goToSolo({ skillFamily: family.id });
+                      }
+                    }}
                   >
                     <span>{family.label}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, opacity: 0.84 }}>

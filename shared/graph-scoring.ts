@@ -339,8 +339,22 @@ export function parseEquationCsv(text: string): EquationFamily[] {
   return families;
 }
 
+const BEGINNER_FAMILIES = ["linear", "quadratic", "absolute_value"];
+
+function filterByCategory(families: EquationFamily[], category?: string): EquationFamily[] {
+  if (!category) return families;
+  if (category === "beginner") {
+    return families.filter(f => f.difficulty === "easy" && BEGINNER_FAMILIES.includes(f.skill_family));
+  }
+  if (category === "advanced") {
+    return families; // all equations
+  }
+  // Treat as a skill_family name (custom)
+  return families.filter(f => f.skill_family === category);
+}
+
 export function selectRandomEquation(families: EquationFamily[], difficulty?: string) {
-  const pool = difficulty ? families.filter((family) => family.difficulty === difficulty) : families;
+  const pool = difficulty ? filterByCategory(families, difficulty) : families;
 
   if (!pool.length) {
     return {
@@ -361,7 +375,7 @@ export function selectRandomEquationWithDescriptor(
   families: EquationFamily[],
   difficulty?: string,
 ): { config: EquationConfig; descriptor: SerializableEquation } {
-  const pool = difficulty ? families.filter((family) => family.difficulty === difficulty) : families;
+  const pool = difficulty ? filterByCategory(families, difficulty) : families;
 
   if (!pool.length) {
     const config: EquationConfig = {
