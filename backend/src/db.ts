@@ -3,6 +3,7 @@ import { config } from "./config";
 import {
   MatchStateError,
   applyMatchAttack,
+  applyMatchAttackAll,
   clampHealth,
   createInitialMatch,
   type LobbyMatch,
@@ -898,6 +899,13 @@ export async function joinLobbyByInviteCode(inviteCode: string, userId: string) 
       }
 
       if (!alreadyJoined) {
+        const countResult = await client.query(
+          "SELECT count(*)::int AS n FROM lobby_players WHERE lobby_id = $1",
+          [lobbyRow.id],
+        );
+        if ((countResult.rows[0] as { n: number }).n >= 8) {
+          throw createDatabaseError("This lobby is full (max 8 players).", 409);
+        }
         await client.query(
           `
             INSERT INTO lobby_players (lobby_id, user_id, ready, is_host)
@@ -1026,9 +1034,12 @@ export async function startLobbyGame(lobbyId: string, hostUserId: string) {
       }
 
       const lobby = await readLobby(client, validLobbyId);
+      const playerCount = lobby.players.length;
+      // Scale health: base 40 per opponent so each player survives ~2 full rounds from everyone
+      const defaultScaledHealth = Math.max(40, 40 * (playerCount - 1));
       const customMaxHealth = typeof lobby.settings.maxHealth === "number" && lobby.settings.maxHealth > 0
         ? Math.round(lobby.settings.maxHealth)
-        : undefined;
+        : defaultScaledHealth;
       const nextSettings = {
         ...lobby.settings,
         match: createInitialMatch(lobby.players.map((player) => player.userId), {
@@ -1182,6 +1193,62 @@ export async function attackLobbyPlayer(
           SET settings = $2::jsonb, updated_at = NOW()
           WHERE id = $1
         `,
+        [validLobbyId, JSON.stringify(nextSettings)],
+      );
+
+      if (matchFinished) {
+        await recordCompletedMatch(client, lobby, nextMatch);
+      }
+
+      return readLobby(client, validLobbyId);
+    }),
+  );
+}
+
+export async function attackAllLobbyPlayers(
+  lobbyId: string,
+  attackerUserId: string,
+  score: number,
+) {
+  const validLobbyId = requireValidLobbyId(lobbyId);
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
+
+  return withSchemaRetry(() =>
+    withTransaction(async (client) => {
+      await lockLobbyForUpdate(client, validLobbyId);
+      const lobby = await readLobby(client, validLobbyId);
+
+      if (lobby.state !== "in_game") {
+        throw createDatabaseError("The match is not live yet.", 409);
+      }
+
+      const match = lobby.match;
+      if (!match || match.status !== "active") {
+        throw createDatabaseError("This match has already ended.", 409);
+      }
+
+      const attacker = lobby.players.find((p) => p.userId === attackerUserId);
+      if (!attacker) {
+        throw createDatabaseError("You are not part of this lobby.", 403);
+      }
+
+      let nextMatch: LobbyMatch;
+      try {
+        nextMatch = applyMatchAttackAll(match, attackerUserId, {
+          score: normalizedScore,
+        });
+      } catch (error) {
+        if (error instanceof MatchStateError) {
+          throw createDatabaseError(error.message, 409);
+        }
+        throw error;
+      }
+
+      const matchFinished = nextMatch.status === "finished";
+      const nextSettings = { ...lobby.settings, match: nextMatch };
+
+      await client.query(
+        "UPDATE lobbies SET settings = $2::jsonb, updated_at = NOW() WHERE id = $1",
         [validLobbyId, JSON.stringify(nextSettings)],
       );
 

@@ -630,7 +630,7 @@
   font-size: clamp(64px, 12vw, 120px);
   line-height: 0.9;
   letter-spacing: -0.04em;
-  text-shadow: 0 0 40px currentColor, 0 0 80px currentColor;
+  text-shadow: none;
 }
 
 .victorySubtitle {

@@ -493,7 +493,10 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
                 {currentPlayer?.ready ? "Unready" : "Ready up"}
               </button>
               {isHost ? (
-                <button type="button" style={legoBtn} onClick={handleStartGame} disabled={busy || !allPlayersReady || lobby.state !== "waiting"}>
+                <button type="button" style={{
+                  ...legoBtn,
+                  ...( (busy || !allPlayersReady || lobby.state !== "waiting") ? { opacity: 0.45, cursor: 'not-allowed', filter: 'grayscale(0.4)' } : {}),
+                }} onClick={handleStartGame} disabled={busy || !allPlayersReady || lobby.state !== "waiting"}>
                   Start game
                 </button>
               ) : null}

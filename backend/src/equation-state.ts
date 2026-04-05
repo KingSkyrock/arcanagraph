@@ -20,8 +20,16 @@ function filterByCategory(allFamilies: EquationFamily[], category?: string): Equ
   if (category === "advanced") {
     return allFamilies;
   }
-  // Custom: treat as skill_family name
   return allFamilies.filter(f => f.skill_family === category);
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return out;
 }
 
 // lobbyId → userId → { config, descriptor }
@@ -30,8 +38,11 @@ const assignments = new Map<
   Map<string, { config: EquationConfig; descriptor: SerializableEquation }>
 >();
 
-// lobbyId → the EquationFamily chosen for the current round
-const roundFamilies = new Map<string, EquationFamily>();
+// lobbyId → shuffled sequence of families (shared order for all players)
+const lobbySequences = new Map<string, EquationFamily[]>();
+
+// lobbyId → userId → current index in the sequence
+const playerIndices = new Map<string, Map<string, number>>();
 
 export function loadEquations() {
   const csvPath = path.resolve(__dirname, "../../data/advanced_equations.csv");
@@ -40,55 +51,68 @@ export function loadEquations() {
   console.log(`Loaded ${families.length} equation families for server-side scoring`);
 }
 
+/** Initialize a shuffled family sequence for a lobby. Call when the game starts. */
+export function initLobbySequence(lobbyId: string, difficulty?: string) {
+  const pool = filterByCategory(families, difficulty);
+  if (!pool.length) {
+    lobbySequences.set(lobbyId, []);
+    return;
+  }
+  lobbySequences.set(lobbyId, shuffle(pool));
+  playerIndices.set(lobbyId, new Map());
+}
+
 export function assignEquation(
   lobbyId: string,
   userId: string,
   difficulty?: string,
 ): SerializableEquation {
-  // If this lobby already has a round family, reuse it (same family, new params).
-  // Otherwise pick one and store it for the round.
-  let family = roundFamilies.get(lobbyId);
-
-  if (!family) {
-    const pool = filterByCategory(families, difficulty);
-    if (!pool.length) {
-      // Absolute fallback
-      const fallbackConfig: EquationConfig = {
-        type: "explicit",
-        fn: (x: number) => x,
-        label: "y = x",
-        latex: "y = x",
-        hasTurningPoints: false,
-      };
-      const fallbackDescriptor: SerializableEquation = {
-        type: "explicit",
-        jsExpr: "x",
-        label: "y = x",
-        latex: "y = x",
-        hasTurningPoints: false,
-      };
-      if (!assignments.has(lobbyId)) assignments.set(lobbyId, new Map());
-      assignments.get(lobbyId)!.set(userId, { config: fallbackConfig, descriptor: fallbackDescriptor });
-      return fallbackDescriptor;
-    }
-    family = pool[Math.floor(Math.random() * pool.length)]!;
-    roundFamilies.set(lobbyId, family);
+  // Ensure sequence exists (lazy init if game:start didn't create one)
+  if (!lobbySequences.has(lobbyId)) {
+    initLobbySequence(lobbyId, difficulty);
   }
 
-  // Generate a new equation from the same family (different random params)
+  const sequence = lobbySequences.get(lobbyId)!;
+
+  if (!sequence.length) {
+    const fallbackDescriptor: SerializableEquation = {
+      type: "explicit", jsExpr: "x", label: "y = x", latex: "y = x", hasTurningPoints: false,
+    };
+    const fallbackConfig: EquationConfig = {
+      type: "explicit", fn: (x: number) => x, label: "y = x", latex: "y = x", hasTurningPoints: false,
+    };
+    if (!assignments.has(lobbyId)) assignments.set(lobbyId, new Map());
+    assignments.get(lobbyId)!.set(userId, { config: fallbackConfig, descriptor: fallbackDescriptor });
+    return fallbackDescriptor;
+  }
+
+  // Get this player's current index
+  if (!playerIndices.has(lobbyId)) {
+    playerIndices.set(lobbyId, new Map());
+  }
+  const indices = playerIndices.get(lobbyId)!;
+  const index = indices.get(userId) ?? 0;
+
+  // Pick the family at this index (wrap around)
+  const family = sequence[index % sequence.length]!;
+
+  // Generate equation with random params from this family
   const { config, descriptor } = generateEquationWithDescriptor(family);
 
   if (!assignments.has(lobbyId)) {
     assignments.set(lobbyId, new Map());
   }
-
   assignments.get(lobbyId)!.set(userId, { config, descriptor });
+
   return descriptor;
 }
 
-/** Clear the round family so the next request picks a new one. */
-export function advanceRound(lobbyId: string) {
-  roundFamilies.delete(lobbyId);
+/** Advance a player to the next family in the sequence. Call after they submit. */
+export function advancePlayer(lobbyId: string, userId: string) {
+  const indices = playerIndices.get(lobbyId);
+  if (!indices) return;
+  const current = indices.get(userId) ?? 0;
+  indices.set(userId, current + 1);
 }
 
 export function getAssignedConfig(
@@ -104,5 +128,6 @@ export function clearAssignment(lobbyId: string, userId: string) {
 
 export function clearLobby(lobbyId: string) {
   assignments.delete(lobbyId);
-  roundFamilies.delete(lobbyId);
+  lobbySequences.delete(lobbyId);
+  playerIndices.delete(lobbyId);
 }

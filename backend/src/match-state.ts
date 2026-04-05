@@ -152,3 +152,60 @@ export function applyMatchAttack(
     },
   };
 }
+
+// Attack all alive opponents at once. Returns the updated match.
+export function applyMatchAttackAll(
+  match: LobbyMatch,
+  attackerUserId: string,
+  options: { score?: number | null; occurredAt?: string } = {},
+): LobbyMatch {
+  const occurredAt = options.occurredAt ?? new Date().toISOString();
+  const score = options.score ?? null;
+
+  if (match.status !== "active") {
+    throw new MatchStateError("This match has already ended.");
+  }
+
+  const attackerState = match.players.find((p) => p.userId === attackerUserId);
+  if (!attackerState || attackerState.health <= 0) {
+    throw new MatchStateError("You have already been eliminated from this match.");
+  }
+
+  const attemptedDamage =
+    score === null
+      ? match.damagePerAttack
+      : calculateScoreDamage(score, match.damagePerAttack);
+
+  let totalDamage = 0;
+  let defeatedCount = 0;
+  const players = match.players.map((player) => {
+    if (player.userId === attackerUserId || player.health <= 0) {
+      return player;
+    }
+
+    const nextHealth = clampHealth(player.health - attemptedDamage, match.maxHealth);
+    const damage = player.health - nextHealth;
+    totalDamage += damage;
+    if (nextHealth === 0) defeatedCount += 1;
+    return { ...player, health: nextHealth };
+  });
+
+  const alivePlayers = players.filter((p) => p.health > 0);
+  const finished = alivePlayers.length <= 1;
+
+  return {
+    ...match,
+    status: finished ? "finished" : "active",
+    winnerUserId: finished ? alivePlayers[0]?.userId ?? null : null,
+    players,
+    endedAt: finished ? occurredAt : null,
+    lastAction: {
+      attackerUserId,
+      targetUserId: "all",
+      damage: totalDamage,
+      score,
+      targetDefeated: defeatedCount > 0,
+      occurredAt,
+    },
+  };
+}

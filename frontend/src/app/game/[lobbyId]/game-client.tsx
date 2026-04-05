@@ -111,8 +111,8 @@ function getLastActionMessage(lobby: Lobby | null) {
   }
 
   const attackerName = getPlayerNameById(lobby?.players ?? [], action.attackerUserId);
-  const targetName = getPlayerNameById(lobby?.players ?? [], action.targetUserId);
-  const defeatSuffix = action.targetDefeated ? " and knocked them out" : "";
+  const targetName = action.targetUserId === "all" ? "all opponents" : getPlayerNameById(lobby?.players ?? [], action.targetUserId);
+  const defeatSuffix = action.targetDefeated ? " and knocked someone out" : "";
   const scorePrefix = action.score === null ? "" : ` with a ${action.score}% graph score`;
 
   return `${attackerName}${scorePrefix} hit ${targetName} for ${action.damage} damage${defeatSuffix}.`;
@@ -349,20 +349,19 @@ export function GameClient({ lobbyId }: GameClientProps) {
   }
 
   async function handleGraphAttack(
-    targetUserId: string,
+    _targetUserId: string,
     trails: Record<string, unknown>,
   ): Promise<{ total: number; shape: number; position: number } | undefined> {
     if (!lobby || !user) {
       return undefined;
     }
 
-    setCastingTargetId(targetUserId);
+    setCastingTargetId("all");
     setError("");
 
     try {
       const result = await emitSocketEvent("game:submit-drawing", {
         lobbyId: lobby.id,
-        targetUserId,
         trails,
       });
 
@@ -573,23 +572,6 @@ export function GameClient({ lobbyId }: GameClientProps) {
                         {player.isHost ? "Host" : "Player"} ·{" "}
                         {isCurrentPlayer ? "You" : "Opponent"}
                       </span>
-
-                      {!isCurrentPlayer ? (
-                        <button
-                          type="button"
-                          className={styles.attackButton}
-                          onClick={() => setSelectedTargetId(player.userId)}
-                          disabled={!canTarget}
-                        >
-                          {castingTargetId === player.userId
-                            ? "Applying score..."
-                            : isSelectedTarget
-                              ? `Targeting ${formatPlayerName(player)}`
-                              : `Target ${formatPlayerName(player)}`}
-                        </button>
-                      ) : (
-                        <span className={styles.selfTag}>Your character</span>
-                      )}
                     </div>
                   </li>
                 );
@@ -616,16 +598,14 @@ export function GameClient({ lobbyId }: GameClientProps) {
               <p className={styles.muted} style={{ textAlign: "center" }}>{lastActionMessage}</p>
             ) : null}
             <div className={styles.resultActions} style={{ justifyContent: "center", marginTop: 12 }}>
-              {lobby.hostUserId === user?.id ? (
-                <button
-                  type="button"
-                  className={styles.attackButton}
-                  onClick={() => void handlePlayAgain()}
-                  disabled={restartingMatch}
-                >
-                  {restartingMatch ? "Resetting..." : "Play Again"}
-                </button>
-              ) : null}
+              <button
+                type="button"
+                className={styles.attackButton}
+                onClick={() => void handlePlayAgain()}
+                disabled={restartingMatch}
+              >
+                {restartingMatch ? "Resetting..." : "Play Again"}
+              </button>
               <Link className={styles.linkButton} href="/play">
                 Leave Match
               </Link>

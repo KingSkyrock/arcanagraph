@@ -9,17 +9,17 @@ import { getFirebaseAdminSummary, pingFirebaseAdmin } from "./firebaseAdmin";
 import {
   requireLobbyId,
   requireReadyValue,
-  requireTargetUserId,
   requireTrailData,
 } from "./socket-payload";
 import { scoreDrawing, type ScoreResult } from "../../shared/graph-scoring";
 import type { SerializableEquation } from "../../shared/graph-scoring";
 import {
-  advanceRound,
+  advancePlayer,
   assignEquation,
   clearAssignment,
   clearLobby,
   getAssignedConfig,
+  initLobbySequence,
   loadEquations,
 } from "./equation-state";
 import {
@@ -30,7 +30,7 @@ import {
   setSessionCookie,
 } from "./auth";
 import {
-  attackLobbyPlayer,
+  attackAllLobbyPlayers,
   type AppUser,
   createLobby,
   ensureDatabaseSchema,
@@ -487,7 +487,6 @@ function registerLobbySockets(io: SocketIOServer) {
           lastAttackTime = now;
 
           const lobbyId = requireLobbyId(payload.lobbyId);
-          const targetUserId = requireTargetUserId(payload.targetUserId);
           const trails = requireTrailData(payload.trails);
           const equationConfig = getAssignedConfig(lobbyId, user.id);
 
@@ -497,14 +496,13 @@ function registerLobbySockets(io: SocketIOServer) {
 
           // Invalidate the assignment so this equation can't be resubmitted
           clearAssignment(lobbyId, user.id);
-          // Advance to a new family for the next round
-          advanceRound(lobbyId);
+          // Advance this player to the next family in the sequence
+          advancePlayer(lobbyId, user.id);
 
           const result = scoreDrawing(trails, equationConfig);
-          const lobby = await attackLobbyPlayer(
+          const lobby = await attackAllLobbyPlayers(
             lobbyId,
             user.id,
-            targetUserId,
             result.total,
           );
 
@@ -561,6 +559,10 @@ function registerLobbySockets(io: SocketIOServer) {
       ) => {
         try {
           const lobby = await startLobbyGame(requireLobbyId(payload.lobbyId), user.id);
+          const difficulty = typeof lobby.settings.difficulty === "string"
+            ? lobby.settings.difficulty
+            : undefined;
+          initLobbySequence(lobby.id, difficulty);
           io.to(`lobby:${lobby.id}`).emit("game:starting", { lobbyId: lobby.id });
           io.to(`lobby:${lobby.id}`).emit("lobby:update", { lobby });
           io.to(`lobby:${lobby.id}`).emit("game:started", {
