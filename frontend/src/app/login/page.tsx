@@ -21,9 +21,14 @@ export default function LoginPage() {
               sockets next. User records now track wins, losses, games played,
               XP, level, and class rank.
             </p>
-            <Link className={styles.homeLink} href="/">
-              Back to home
-            </Link>
+            <div className={styles.heroLinks}>
+              <Link className={styles.homeLink} href="/">
+                Back to home
+              </Link>
+              <Link className={styles.homeLink} href="/play">
+                Open lobby
+              </Link>
+            </div>
           </div>
 
           <div className={styles.blockField} aria-hidden="true">

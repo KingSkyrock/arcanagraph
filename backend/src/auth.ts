@@ -40,9 +40,7 @@ export async function createSession(idToken: string, requestedDisplayName?: stri
   return { sessionCookie, user };
 }
 
-export async function getSessionUser(request: Request) {
-  const sessionCookie = request.cookies?.[config.sessionCookieName];
-
+export async function getSessionUserFromSessionCookie(sessionCookie?: string) {
   if (!sessionCookie) {
     return null;
   }
@@ -56,16 +54,8 @@ export async function getSessionUser(request: Request) {
   }
 }
 
-export async function getSessionUserFromSessionCookie(sessionCookie?: string | null) {
-  if (!sessionCookie) {
-    return null;
-  }
-
-  try {
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    return getUserByFirebaseUid(decoded.uid);
-  } catch (error) {
-    console.error("Failed to verify session cookie", error);
-    return null;
-  }
+export async function getSessionUser(request: Request) {
+  return getSessionUserFromSessionCookie(
+    request.cookies?.[config.sessionCookieName],
+  );
 }

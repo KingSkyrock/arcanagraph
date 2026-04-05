@@ -9,22 +9,10 @@ import {
 } from "firebase/auth";
 import { apiUrl } from "@/lib/api";
 import { firebaseConfigReady, getFirebaseAuth } from "@/lib/firebase-client";
+import type { AppUser } from "@/lib/types";
 import styles from "./page.module.css";
 
 type Mode = "sign-in" | "create-account";
-
-type AppUser = {
-  id: string;
-  firebaseUid: string;
-  email: string | null;
-  displayName: string | null;
-  xp: number;
-  level: number;
-  className: string;
-  wins: number;
-  losses: number;
-  gamesPlayed: number;
-};
 
 type LeaderboardResponse = {
   leaderboard: AppUser[];
@@ -44,6 +32,36 @@ function formatPlayerRank(user: AppUser) {
 
 async function readJson<T>(response: Response) {
   return (await response.json()) as T & { error?: string };
+}
+
+function getAuthErrorMessage(error: unknown, mode: Mode) {
+  const code =
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+      ? error.code
+      : "";
+
+  switch (code) {
+    case "auth/user-not-found":
+    case "auth/invalid-credential":
+      return mode === "sign-in"
+        ? "No player exists for that email in the current Firebase auth target. Use Register first, or make sure you're signing into the same emulator/project."
+        : "That player account could not be found.";
+    case "auth/email-already-in-use":
+      return "That email already has a player account. Switch to Login instead.";
+    case "auth/wrong-password":
+      return "That password does not match the player account.";
+    case "auth/invalid-email":
+      return "That email address is not valid.";
+    case "auth/weak-password":
+      return "Use a password with at least 6 characters.";
+    case "auth/network-request-failed":
+      return "Could not reach Firebase. Make sure the auth emulator or project is running.";
+    default:
+      return error instanceof Error ? error.message : "Authentication failed.";
+  }
 }
 
 export function LoginForm() {
@@ -152,12 +170,19 @@ export function LoginForm() {
       setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
       await loadLeaderboard();
     } catch (submitError) {
-      console.error(submitError);
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Authentication failed.",
-      );
+      const message = getAuthErrorMessage(submitError, mode);
+
+      if (
+        !(
+          typeof submitError === "object" &&
+          submitError !== null &&
+          "code" in submitError
+        )
+      ) {
+        console.error(submitError);
+      }
+
+      setError(message);
     } finally {
       setLoading(false);
     }

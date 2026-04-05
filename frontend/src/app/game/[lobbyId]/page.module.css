@@ -22,7 +22,11 @@
 }
 
 .kicker,
-.label {
+.label,
+.summaryCard span,
+.meta,
+.fighterIdentity small,
+.selfTag {
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -41,15 +45,15 @@
 }
 
 .panel h2 {
-  font-size: clamp(34px, 5vw, 48px);
+  font-size: clamp(28px, 4vw, 48px);
 }
 
 .copy,
 .muted,
-.error {
+.error,
+.result {
   font-size: 16px;
   line-height: 1.65;
-  color: var(--ink-soft);
 }
 
 .links {
@@ -58,21 +62,41 @@
   gap: 12px;
 }
 
-.linkButton {
+.linkButton,
+.attackButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 46px;
+  min-height: 48px;
   padding: 0 18px;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.42);
   font-weight: 800;
+  transition:
+    transform 120ms ease,
+    opacity 120ms ease,
+    background 120ms ease;
 }
 
-.panel strong {
-  font-size: 22px;
-  line-height: 1.35;
+.linkButton {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.attackButton {
+  background: linear-gradient(180deg, rgba(37, 11, 181, 0.9), rgba(93, 43, 255, 0.92));
+  color: white;
+}
+
+.linkButton:hover,
+.attackButton:hover:enabled {
+  transform: translateY(-1px);
+}
+
+.attackButton:disabled,
+.linkButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .panelHeader {
@@ -82,7 +106,8 @@
   align-items: flex-start;
 }
 
-.state {
+.state,
+.badge {
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(37, 11, 181, 0.1);
@@ -90,119 +115,104 @@
   font-weight: 800;
 }
 
-.roster {
-  display: grid;
-  gap: 12px;
-  padding: 0;
-  list-style: none;
-}
-
-.rosterItem {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  padding: 16px 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.38);
-}
-
-.rosterItem div {
-  display: grid;
-  gap: 4px;
-}
-
-.rosterItem strong {
-  font-size: 17px;
-}
-
-.rosterItem small {
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--ink-soft);
-}
-
-.stage {
+.summaryGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
-.stage span {
+.summaryCard {
   display: grid;
-  place-items: center;
-  min-height: 140px;
+  gap: 8px;
   padding: 18px;
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(68, 17, 255, 0.14), rgba(68, 17, 255, 0.04));
-  font-size: 15px;
-  font-weight: 800;
-  text-align: center;
+  background: rgba(255, 255, 255, 0.4);
 }
 
-.gameplay {
+.summaryCard strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.fighterGrid {
   display: grid;
-  gap: 18px;
+  gap: 16px;
+  padding: 0;
+  list-style: none;
 }
 
-.healthGrid {
+.fighterCard {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(68, 17, 255, 0.16), rgba(255, 255, 255, 0.52)),
+    rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(37, 11, 181, 0.16);
 }
 
-.healthCard {
-  padding: 18px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.45);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-.healthCard strong {
-  display: block;
-  margin-bottom: 10px;
-}
-
-.healthBarBackground {
-  width: 100%;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  margin-bottom: 10px;
-}
-
-.healthBarFill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.2s ease;
-}
-
-.attackPanel {
-  display: grid;
+.fighterHeader,
+.actionRow,
+.healthRow {
+  display: flex;
   gap: 14px;
-  padding: 18px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.42);
+  align-items: center;
+  justify-content: space-between;
 }
 
-.attackButtons {
+.fighterIdentity {
   display: grid;
-  gap: 12px;
+  gap: 6px;
 }
 
-.attackButton {
-  min-height: 48px;
-  padding: 0 20px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(37, 11, 181, 0.08);
-  color: var(--ink-soft);
-  font-weight: 800;
+.fighterIdentity strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.healthTrack {
+  position: relative;
+  width: 100%;
+  min-height: 24px;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(133, 7, 31, 0.24);
+  background: rgba(133, 7, 31, 0.12);
+}
+
+.healthFill {
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff6b6b, #ff4d4d 60%, #c1121f);
+  transition: width 180ms ease;
+}
+
+.meta {
+  letter-spacing: 0.08em;
+}
+
+.selfTag {
+  letter-spacing: 0.08em;
+}
+
+.result {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(37, 11, 181, 0.09);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.resultActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 @media (max-width: 900px) {
-  .stage {
+  .summaryGrid {
     grid-template-columns: 1fr;
   }
 }
@@ -218,7 +228,16 @@
     border-radius: 24px;
   }
 
-  .rosterItem {
-    grid-template-columns: 1fr;
+  .panelHeader,
+  .fighterHeader,
+  .actionRow,
+  .healthRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .attackButton,
+  .linkButton {
+    width: 100%;
   }
 }

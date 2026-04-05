@@ -1,11 +1,17 @@
+import type { Metadata } from "next";
 import { GameClient } from "./game-client";
 
-type PageProps = {
-  params: {
-    lobbyId: string;
-  };
+export const metadata: Metadata = {
+  title: "Game",
+  description: "Active Arcanagraph multiplayer match",
 };
 
-export default function LobbyPage({ params }: PageProps) {
-  return <GameClient lobbyId={params.lobbyId} />;
+export default async function GamePage({
+  params,
+}: {
+  params: Promise<{ lobbyId: string }>;
+}) {
+  const { lobbyId } = await params;
+
+  return <GameClient lobbyId={lobbyId} />;
 }
