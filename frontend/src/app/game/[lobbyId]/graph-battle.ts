@@ -1,4 +1,4 @@
-// Frontend-only: DOM-dependent rendering functions.
+// Frontend-only: DOM-dependent rendering functions + UI helpers.
 // All pure scoring/equation logic lives in shared/graph-scoring.ts.
 
 export {
@@ -20,10 +20,52 @@ export {
 
 import {
   type EquationConfig,
+  type EquationFamily,
   type Point,
   graphConfig,
   sampleCurvePoints,
 } from "@/shared/graph-scoring";
+
+// --- Frontend-only helpers (added by teammates, not in shared module) ---
+
+type EquationFilters = {
+  difficulty?: string;
+  skillFamily?: string | null;
+};
+
+export function formatSkillFamilyLabel(skillFamily: string) {
+  return skillFamily
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+export function listSkillFamilies(families: EquationFamily[]) {
+  return [...new Set(families.map((family) => family.skill_family.trim()).filter(Boolean))].sort(
+    (left, right) =>
+      formatSkillFamilyLabel(left).localeCompare(formatSkillFamilyLabel(right)),
+  );
+}
+
+export function filterEquationFamilies(
+  families: EquationFamily[],
+  options: EquationFilters = {},
+) {
+  return families.filter((family) => {
+    if (options.difficulty && family.difficulty !== options.difficulty) {
+      return false;
+    }
+
+    if (options.skillFamily && family.skill_family !== options.skillFamily) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+// --- DOM-dependent rendering ---
 
 function mathToGrid(mx: number, my: number): Point {
   return {

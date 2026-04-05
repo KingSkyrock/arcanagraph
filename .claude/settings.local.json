@@ -7,7 +7,8 @@
       "Bash(curl -s http://127.0.0.1:9099/)",
       "Bash(ls /Users/lukewang/Documents/dev/arcanagraph/frontend/src/app/game/[lobbyId]/)",
       "Bash(ln -sf ../../shared src/shared)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

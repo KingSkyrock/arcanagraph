@@ -317,6 +317,38 @@
   color: #fff;
 }
 
+.targetGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.targetCard {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(45, 17, 217, 0.08);
+}
+
+.targetCard span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.targetCard strong {
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.targetCard small {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
 .record {
   display: flex;
   justify-content: space-between;

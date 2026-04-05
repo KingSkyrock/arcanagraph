@@ -1,8 +1,12 @@
+export type PrimaryHand = "Left" | "Right";
+
 export type AppUser = {
   id: string;
   firebaseUid: string;
   email: string | null;
   displayName: string | null;
+  primaryHand: PrimaryHand | null;
+  profilePictureId: string;
   xp: number;
   level: number;
   className: string;

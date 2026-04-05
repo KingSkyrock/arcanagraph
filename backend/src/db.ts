@@ -10,6 +10,12 @@ import {
   type MatchPlayer,
   type MatchStatus,
 } from "./match-state";
+import {
+  defaultProfilePictureId,
+  getProfilePictureById,
+  isProfilePictureUnlocked,
+  normalizeProfilePictureId,
+} from "./profile-pictures";
 
 const pool = new Pool({
   connectionString: config.databaseUrl,
@@ -19,12 +25,15 @@ const inviteAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 let schemaPromise: Promise<void> | null = null;
 
 export type LobbyState = "waiting" | "starting" | "in_game";
+export type PrimaryHand = "Left" | "Right";
 
 export type AppUser = {
   id: string;
   firebaseUid: string;
   email: string | null;
   displayName: string | null;
+  primaryHand: PrimaryHand | null;
+  profilePictureId: string;
   xp: number;
   level: number;
   className: string;
@@ -90,6 +99,10 @@ function requireValidLobbyId(lobbyId: string) {
   }
 
   return normalizedLobbyId;
+}
+
+function normalizePrimaryHand(value: unknown): PrimaryHand | null {
+  return value === "Left" || value === "Right" ? value : null;
 }
 
 function generateInviteCode() {
@@ -244,6 +257,8 @@ function mapUser(row: Record<string, unknown>): AppUser {
     firebaseUid: String(row.firebase_uid),
     email: (row.email as string | null) ?? null,
     displayName: (row.display_name as string | null) ?? null,
+    primaryHand: normalizePrimaryHand(row.primary_hand),
+    profilePictureId: normalizeProfilePictureId(row.profile_picture_id),
     xp: Number(row.xp ?? 0),
     level,
     className: getClassNameForLevel(level),
@@ -503,6 +518,8 @@ async function runSchemaSetup() {
       firebase_uid TEXT NOT NULL UNIQUE,
       email TEXT UNIQUE,
       display_name TEXT,
+      primary_hand TEXT,
+      profile_picture_id TEXT NOT NULL DEFAULT '${defaultProfilePictureId}',
       xp INTEGER NOT NULL DEFAULT 0,
       level INTEGER NOT NULL DEFAULT 1,
       wins INTEGER NOT NULL DEFAULT 0,
@@ -511,6 +528,48 @@ async function runSchemaSetup() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS primary_hand TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS profile_picture_id TEXT NOT NULL DEFAULT '${defaultProfilePictureId}'
+  `);
+
+  await pool.query(
+    `
+      UPDATE users
+      SET profile_picture_id = $1
+      WHERE profile_picture_id IS NULL OR profile_picture_id = ''
+    `,
+    [defaultProfilePictureId],
+  );
+
+  await pool.query(`
+    UPDATE users
+    SET primary_hand = NULL
+    WHERE primary_hand IS NOT NULL
+      AND primary_hand NOT IN ('Left', 'Right')
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'users_primary_hand_check'
+      ) THEN
+        ALTER TABLE users
+        ADD CONSTRAINT users_primary_hand_check
+        CHECK (primary_hand IS NULL OR primary_hand IN ('Left', 'Right'));
+      END IF;
+    END
+    $$;
   `);
 
   await pool.query(`
@@ -638,6 +697,92 @@ export async function getUserByFirebaseUid(firebaseUid: string) {
 
   if (!result.rows[0]) {
     return null;
+  }
+
+  return mapUser(result.rows[0]);
+}
+
+export async function updateUserPrimaryHand(userId: string, primaryHand: PrimaryHand) {
+  const normalizedPrimaryHand = normalizePrimaryHand(primaryHand);
+
+  if (!normalizedPrimaryHand) {
+    throw createDatabaseError(
+      "Primary hand must be either Left or Right.",
+      400,
+    );
+  }
+
+  const result = await withSchemaRetry(() =>
+    pool.query(
+      `
+        UPDATE users
+        SET
+          primary_hand = $2,
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `,
+      [userId, normalizedPrimaryHand],
+    ),
+  );
+
+  if (!result.rows[0]) {
+    throw createDatabaseError("Player profile not found.", 404);
+  }
+
+  return mapUser(result.rows[0]);
+}
+
+export async function updateUserProfilePicture(
+  userId: string,
+  profilePictureId: string,
+) {
+  const selectedPicture = getProfilePictureById(profilePictureId);
+
+  if (!selectedPicture) {
+    throw createDatabaseError("Choose a valid profile picture.", 400);
+  }
+
+  const currentUserResult = await withSchemaRetry(() =>
+    pool.query(
+      `
+        SELECT *
+        FROM users
+        WHERE id = $1
+      `,
+      [userId],
+    ),
+  );
+
+  if (!currentUserResult.rows[0]) {
+    throw createDatabaseError("Player profile not found.", 404);
+  }
+
+  const currentUser = mapUser(currentUserResult.rows[0]);
+
+  if (!isProfilePictureUnlocked(currentUser.level, selectedPicture.id)) {
+    throw createDatabaseError(
+      `${selectedPicture.name} unlocks at Level ${selectedPicture.unlockLevel}.`,
+      403,
+    );
+  }
+
+  const result = await withSchemaRetry(() =>
+    pool.query(
+      `
+        UPDATE users
+        SET
+          profile_picture_id = $2,
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING *
+      `,
+      [userId, selectedPicture.id],
+    ),
+  );
+
+  if (!result.rows[0]) {
+    throw createDatabaseError("Player profile not found.", 404);
   }
 
   return mapUser(result.rows[0]);

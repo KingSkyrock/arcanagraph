@@ -151,6 +151,136 @@
   color: #fff3c4;
 }
 
+.helpButton,
+.modalCloseButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  transition:
+    transform 180ms ease-out,
+    background 180ms ease-out,
+    box-shadow 180ms ease-out;
+}
+
+.helpButton {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.helpButton:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgba(4, 11, 36, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.modalCard {
+  width: min(100%, 720px);
+  max-height: calc(100vh - 48px);
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+  overflow-y: auto;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, rgba(16, 39, 111, 0.96), rgba(10, 24, 71, 0.98));
+  box-shadow:
+    0 28px 60px rgba(2, 7, 28, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.modalHeader h2 {
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+  color: #fff;
+  font-size: clamp(28px, 4vw, 44px);
+}
+
+.modalCloseButton {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-weight: 800;
+}
+
+.modalCloseButton:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.helpStepGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.helpStepCard {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.helpStepIconGroup {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.helpStepIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: 18px;
+  background: rgba(245, 158, 11, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  font-size: 30px;
+}
+
+.helpStepBody {
+  display: grid;
+  gap: 8px;
+}
+
+.helpStepBody strong {
+  font-size: 20px;
+  line-height: 1.08;
+  color: #fff;
+}
+
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -445,6 +575,10 @@
   .cvBattleLayout {
     grid-template-columns: 1fr;
   }
+
+  .helpStepGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -462,13 +596,15 @@
   .panelHeader,
   .fighterHeader,
   .actionRow,
-  .healthRow {
+  .healthRow,
+  .modalHeader {
     flex-direction: column;
     align-items: flex-start;
   }
 
   .attackButton,
-  .linkButton {
+  .linkButton,
+  .modalCloseButton {
     width: 100%;
   }
 
@@ -483,5 +619,10 @@
 
   .cvControlGroup {
     width: 100%;
+  }
+
+  .modalCard {
+    padding: 22px;
+    border-radius: 24px;
   }
 }

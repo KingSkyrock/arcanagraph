@@ -9,7 +9,12 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { apiUrl } from "@/lib/api";
-import { firebaseConfigReady, getFirebaseAuth } from "@/lib/firebase-client";
+import {
+  firebaseConfigReady,
+  getFirebaseAuth,
+  getFirebaseClientSummary,
+} from "@/lib/firebase-client";
+import { emitSessionUserUpdated } from "@/lib/session-user-events";
 import type { AppUser } from "@/lib/types";
 import styles from "./page.module.css";
 
@@ -21,6 +26,16 @@ type LeaderboardResponse = {
 
 type SessionResponse = {
   user: AppUser | null;
+};
+
+type HealthResponse = {
+  ok: boolean;
+  firebase?: {
+    mode: "emulator" | "project";
+    projectId: string;
+    reachable: boolean;
+  };
+  error?: string;
 };
 
 function formatPlayerName(user: AppUser) {
@@ -66,6 +81,7 @@ function getAuthErrorMessage(error: unknown, mode: Mode) {
 }
 
 export function LoginForm() {
+  const firebaseClientSummary = getFirebaseClientSummary();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("sign-in");
   const [displayName, setDisplayName] = useState("");
@@ -76,10 +92,14 @@ export function LoginForm() {
   const [status, setStatus] = useState("Ready to sign in.");
   const [user, setUser] = useState<AppUser | null>(null);
   const [leaderboard, setLeaderboard] = useState<AppUser[]>([]);
+  const [backendFirebaseTarget, setBackendFirebaseTarget] =
+    useState<HealthResponse["firebase"] | null>(null);
+  const [backendFirebaseError, setBackendFirebaseError] = useState("");
 
   useEffect(() => {
     void loadSession();
     void loadLeaderboard();
+    void loadBackendHealth();
   }, []);
 
   async function loadSession() {
@@ -90,6 +110,7 @@ export function LoginForm() {
 
       if (response.status === 401) {
         setUser(null);
+        emitSessionUserUpdated(null);
         setStatus("No active match session yet.");
         return;
       }
@@ -101,9 +122,11 @@ export function LoginForm() {
       }
 
       setUser(payload.user);
+      emitSessionUserUpdated(payload.user);
       setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
     } catch (loadError) {
       console.error(loadError);
+      emitSessionUserUpdated(null);
       setStatus("Could not reach the game server. You can still create an account.");
     }
   }
@@ -123,6 +146,32 @@ export function LoginForm() {
     } catch (loadError) {
       console.error(loadError);
       setLeaderboard([]);
+    }
+  }
+
+  async function loadBackendHealth() {
+    try {
+      const response = await fetch(apiUrl("/api/auth/target"), {
+        credentials: "include",
+      });
+      const payload = await readJson<HealthResponse>(response);
+
+      if (payload.firebase) {
+        setBackendFirebaseTarget(payload.firebase);
+      }
+
+      if (!response.ok || !payload.ok || !payload.firebase) {
+        throw new Error(payload.error || "Could not load backend Firebase status.");
+      }
+
+      setBackendFirebaseError("");
+    } catch (loadError) {
+      console.error(loadError);
+      setBackendFirebaseError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Could not load backend Firebase status.",
+      );
     }
   }
 
@@ -169,6 +218,7 @@ export function LoginForm() {
       }
 
       setUser(payload.user);
+      emitSessionUserUpdated(payload.user);
       setStatus(`Signed in as ${formatPlayerName(payload.user)}.`);
       router.push("/");
     } catch (submitError) {
@@ -205,6 +255,7 @@ export function LoginForm() {
       }
 
       setUser(null);
+      emitSessionUserUpdated(null);
       setStatus("Signed out. Ready for another player.");
     } catch (logoutError) {
       console.error(logoutError);
@@ -213,6 +264,37 @@ export function LoginForm() {
       setLoading(false);
     }
   }
+
+  const frontendTargetLabel =
+    firebaseClientSummary.mode === "emulator"
+      ? `Auth emulator (${firebaseClientSummary.emulatorUrl})`
+      : firebaseClientSummary.projectId
+        ? `Firebase project ${firebaseClientSummary.projectId}`
+        : "Missing frontend Firebase project config";
+
+  const frontendTargetMeta =
+    firebaseClientSummary.mode === "emulator"
+      ? "Frontend login is pointed at the local auth emulator."
+      : firebaseClientSummary.authDomain
+        ? `Auth domain: ${firebaseClientSummary.authDomain}`
+        : "Set the Firebase web app env vars to enable remote sign-in.";
+
+  const backendTargetLabel = backendFirebaseTarget
+    ? backendFirebaseTarget.mode === "emulator"
+      ? "Firebase auth emulator"
+      : `Firebase project ${backendFirebaseTarget.projectId}`
+    : "Waiting for backend health check...";
+
+  const backendTargetMeta = backendFirebaseTarget
+    ? backendFirebaseTarget.reachable
+      ? "Backend Firebase auth check succeeded."
+      : "Backend Firebase auth check failed."
+    : backendFirebaseError || "The backend will report its Firebase target here.";
+
+  const firebaseTargetsMatch = backendFirebaseTarget
+    ? backendFirebaseTarget.mode === firebaseClientSummary.mode &&
+      backendFirebaseTarget.projectId === firebaseClientSummary.projectId
+    : null;
 
   return (
     <div className={styles.panel}>
@@ -311,6 +393,28 @@ export function LoginForm() {
           >
             Sign out
           </button>
+        ) : null}
+      </div>
+
+      <div className={styles.statusCard}>
+        <p className={styles.statusLabel}>Firebase target</p>
+        <div className={styles.targetGrid}>
+          <div className={styles.targetCard}>
+            <span>Frontend auth</span>
+            <strong>{frontendTargetLabel}</strong>
+            <small>{frontendTargetMeta}</small>
+          </div>
+          <div className={styles.targetCard}>
+            <span>Backend session</span>
+            <strong>{backendTargetLabel}</strong>
+            <small>{backendTargetMeta}</small>
+          </div>
+        </div>
+        {firebaseTargetsMatch === false ? (
+          <p className={styles.error}>
+            Frontend and backend Firebase targets do not match yet. Login will fail until both
+            point at the same project or emulator.
+          </p>
         ) : null}
       </div>
 

@@ -1,10 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import Image from 'next/image';
-import { apiUrl } from '@/lib/api';
 
 const LEADERBOARD = [
   { rank: 1, name: 'Zara W.',   division: 'Advanced',     score: 9820, wins: 47 },
@@ -60,16 +58,6 @@ function BgPattern() {
  * @returns idk
  */
 function HeroSection() {
-  const router = useRouter();
-  const [loggedIn, setLoggedIn] = useState(false);
-
-  useEffect(() => {
-    fetch(apiUrl('/api/auth/me'), { credentials: 'include' })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => { if (data?.user) setLoggedIn(true); })
-      .catch(() => {});
-  }, []);
-
   const scrollDown = () => document.getElementById('leaderboard')?.scrollIntoView({ behavior: 'smooth' });
 
   return (
@@ -120,7 +108,7 @@ function HeroSection() {
 
         {/* PLAY NOW — amber pill with strong drop shadow like reference */}
         <Link
-          href={loggedIn ? '/play' : '/login'}
+          href="/play"
           style={{
             textDecoration: 'none',
             background: '#f59e0b',
@@ -170,7 +158,7 @@ function HeroSection() {
 
       {/* RIGHT: actual uploaded elephant PNG, flush bottom-right */}
       <div style={{
-        position: 'absolute', right: '0%', bottom: 0,
+        position: 'absolute', right: '0%', bottom: '20%',
         width: '54%', height: '92%',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         zIndex: 5, pointerEvents: 'none',
@@ -241,16 +229,15 @@ function LeaderboardSection() {
   return (
     <section id="leaderboard" style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '96px 24px',
-      background: 'linear-gradient(180deg, #2563eb 0%, #3b82f6 100%)',
+      padding: '96px 24px', background: 'rgba(180, 191, 239, 0.99)', position: 'relative', zIndex: 10,
     }}>
       <div style={{ width: '100%', maxWidth: 820 }}>
         <div style={{ textAlign: 'center', marginBottom: 44 }}>
           <h2 style={{
-            fontSize: 60, fontWeight: 900, color: '#fff', margin: '0 0 10px',
-            fontFamily: "'Impact', 'Arial Black', 'Oswald', system-ui, sans-serif", letterSpacing: '-1px',
+            fontSize: 60, fontWeight: 900, color: 'rgb(9, 15, 131)', margin: '0 0 10px',
+            fontFamily: " 'Arial Black', 'Oswald', system-ui, sans-serif", letterSpacing: '-1px',
           }}>Leaderboard</h2>
-          <p style={{ color: 'rgba(255,255,255,0.78)', fontSize: 18, fontFamily: "'Nunito', system-ui, sans-serif" }}>
+          <p style={{ color: '#64748b', fontSize: 18, fontFamily: "'Nunito', system-ui, sans-serif" }}>
             Top wizards this week
           </p>
         </div>
@@ -259,25 +246,22 @@ function LeaderboardSection() {
           {tabs.map(t => (
             <button key={t} onClick={() => setFilter(t)} style={{
               padding: '9px 24px', borderRadius: 50, cursor: 'pointer',
-              border: filter === t ? 'none' : '1.5px solid rgba(255,255,255,0.24)',
-              background: filter === t ? '#f59e0b' : 'rgba(255,255,255,0.14)',
-              color: '#fff',
+              border: filter === t ? 'none' : '1.5px solid #cbd5e1',
+              background: filter === t ? '#1a56db' : '#fff',
+              color: filter === t ? '#fff' : '#334155',
               fontWeight: 700, fontSize: 14, transition: 'all 0.15s',
               fontFamily: "'Nunito', system-ui, sans-serif",
-              boxShadow: filter === t ? '0 4px 0 #b45309, 0 4px 12px rgba(0,0,0,0.2)' : 'none',
             }}>{t}</button>
           ))}
         </div>
 
         <div style={{
-          background: 'rgba(11,31,92,0.24)', borderRadius: 20, overflow: 'hidden',
-          boxShadow: '0 28px 60px rgba(10,20,68,0.22), inset 0 1px 0 rgba(255,255,255,0.16)',
-          border: '1px solid rgba(255,255,255,0.18)',
-          backdropFilter: 'blur(14px)',
+          background: '#fff', borderRadius: 20, overflow: 'hidden',
+          boxShadow: '0 4px 40px rgba(26,86,219,0.1)', border: '1.5px solid #e2e8f0',
         }}>
           <div style={{
             display: 'grid', gridTemplateColumns: '60px 1fr 170px 110px 80px',
-            padding: '14px 28px', background: 'rgba(11,31,92,0.4)', color: '#fff',
+            padding: '14px 28px', background: '#1a56db', color: '#fff',
             fontWeight: 800, fontSize: 13, letterSpacing: '0.6px',
             fontFamily: "'Nunito', system-ui, sans-serif",
           }}>
@@ -288,23 +272,23 @@ function LeaderboardSection() {
               display: 'grid', gridTemplateColumns: '60px 1fr 170px 110px 80px',
               padding: '17px 28px',
               background: 'transparent',
-              borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+              borderBottom: i < rows.length - 1 ? '1px solid #f1f5f9' : 'none',
               alignItems: 'center', transition: 'background 0.15s',
             }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+              onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#f8fafc' : '#fff'}
             >
-              <span style={{ fontSize: row.rank <= 3 ? 22 : 16, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>
+              <span style={{ fontSize: row.rank <= 3 ? 22 : 16, fontWeight: 700, color: '#94a3b8' }}>
                 {RANK_ICON[row.rank] ?? `#${row.rank}`}
               </span>
-              <span style={{ fontWeight: 800, color: '#fff', fontSize: 16, fontFamily: "'Nunito', system-ui, sans-serif" }}>
+              <span style={{ fontWeight: 800, color: '#1e293b', fontSize: 16, fontFamily: "'Nunito', system-ui, sans-serif" }}>
                 {row.name}
               </span>
               <DivBadge d={row.division} />
-              <span style={{ fontWeight: 800, color: '#fbbf24', fontSize: 16, fontFamily: "'Nunito', system-ui, sans-serif" }}>
+              <span style={{ fontWeight: 800, color: '#1a56db', fontSize: 16, fontFamily: "'Nunito', system-ui, sans-serif" }}>
                 {row.score.toLocaleString()}
               </span>
-              <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontFamily: "'Nunito', system-ui, sans-serif" }}>
+              <span style={{ color: '#64748b', fontWeight: 700, fontFamily: "'Nunito', system-ui, sans-serif" }}>
                 {row.wins}W
               </span>
             </div>
@@ -321,6 +305,48 @@ export default function HomePage() {
       <Navbar />
       <HeroSection />
       <LeaderboardSection />
+      {/* Place the footer here, before the closing fragment */}
+      <footer
+        style={{
+          width: '100%',
+          background: 'rgba(30, 41, 59, 0.98)',
+          color: '#e0e7ef',
+          fontFamily: "'Nunito', system-ui, sans-serif",
+          fontWeight: 500,
+          fontSize: 18,
+          padding: '48px 0 40px 0',
+          marginTop: 64,
+          boxShadow: '0 -2px 16px rgba(30,41,59,0.08)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          minHeight: 220,
+          zIndex: 20,
+          position: 'relative',
+        }}
+      >
+        <div style={{ maxWidth: 1200, width: '90%', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 24 }}>
+          <div
+            style={{
+              fontWeight: 900,
+              fontSize: 18,
+              letterSpacing: '0.5px',
+              color: '#fff',
+              marginBottom: 8,
+              fontFamily: "'Segoe UI', 'Inter', 'Oswald', sans-serif",
+            }}
+          >
+            Arcanagraph
+          </div>
+        </div>
+        <div style={{ flex: 1 }} />
+        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center', marginBottom: 4 }}>
+          Made with <span style={{ color: '#ef4444', fontSize: 18, verticalAlign: 'middle' }}>♥</span> by ...
+        </div>
+        <div style={{ fontSize: 15, color: '#b6c3d6', textAlign: 'center' }}>
+          © 2026 Arcanagraph. All rights reserved.
+        </div>
+      </footer>
     </>
   );
 }

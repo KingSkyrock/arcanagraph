@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { Server as SocketIOServer } from "socket.io";
 import { config } from "./config";
+import { getFirebaseAdminSummary, pingFirebaseAdmin } from "./firebaseAdmin";
 import {
   requireLobbyId,
   requireReadyValue,
@@ -39,6 +40,8 @@ import {
   pingDatabase,
   restartLobbyMatch,
   startLobbyGame,
+  updateUserProfilePicture,
+  updateUserPrimaryHand,
   updateLobbyPlayerReady,
 } from "./db";
 
@@ -116,6 +119,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function requirePrimaryHand(value: unknown) {
+  if (value === "Left" || value === "Right") {
+    return value;
+  }
+
+  throw Object.assign(
+    new Error("Choose Left or Right as your primary hand."),
+    { statusCode: 400 },
+  );
+}
+
+function requireProfilePictureId(value: unknown) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  throw Object.assign(
+    new Error("Choose one of the available profile pictures."),
+    { statusCode: 400 },
+  );
+}
+
 async function requireSessionUser(
   request: express.Request,
   response: express.Response,
@@ -159,6 +184,33 @@ function createApp() {
     response.json({ ok: true });
   });
 
+  app.get("/api/auth/target", async (_request, response) => {
+    const firebase = getFirebaseAdminSummary();
+
+    try {
+      await pingFirebaseAdmin();
+      response.json({
+        ok: true,
+        firebase: {
+          mode: firebase.mode,
+          projectId: firebase.projectId,
+          reachable: true,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to verify backend Firebase target", error);
+      response.status(503).json({
+        ok: false,
+        error: "Backend cannot reach the configured Firebase auth target right now.",
+        firebase: {
+          mode: firebase.mode,
+          projectId: firebase.projectId,
+          reachable: false,
+        },
+      });
+    }
+  });
+
   app.post("/api/auth/session", async (request, response) => {
     try {
       const idToken = String(request.body?.idToken || "");
@@ -196,6 +248,50 @@ function createApp() {
     }
 
     response.json({ user });
+  });
+
+  app.put("/api/settings/hand", async (request, response) => {
+    const user = await requireSessionUser(request, response);
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const primaryHand = requirePrimaryHand(request.body?.primaryHand);
+      const updatedUser = await updateUserPrimaryHand(user.id, primaryHand);
+      response.json({ user: updatedUser });
+    } catch (error) {
+      console.error("Failed to update primary hand", error);
+      response.status(getStatusCode(error)).json({
+        error: getErrorMessage(
+          error,
+          "Could not update your hand-tracking preference.",
+        ),
+      });
+    }
+  });
+
+  app.put("/api/settings/profile-picture", async (request, response) => {
+    const user = await requireSessionUser(request, response);
+
+    if (!user) {
+      return;
+    }
+
+    try {
+      const profilePictureId = requireProfilePictureId(request.body?.profilePictureId);
+      const updatedUser = await updateUserProfilePicture(user.id, profilePictureId);
+      response.json({ user: updatedUser });
+    } catch (error) {
+      console.error("Failed to update profile picture", error);
+      response.status(getStatusCode(error)).json({
+        error: getErrorMessage(
+          error,
+          "Could not update your profile picture.",
+        ),
+      });
+    }
   });
 
   app.get("/api/leaderboard", async (request, response) => {
@@ -508,7 +604,11 @@ async function start() {
   registerLobbySockets(io);
 
   server.listen(config.port, () => {
+    const firebase = getFirebaseAdminSummary();
     console.log(`Backend listening on http://localhost:${config.port}`);
+    console.log(
+      `Firebase admin target: ${firebase.mode === "emulator" ? `emulator (${firebase.emulatorHost})` : `project ${firebase.projectId}`} via ${firebase.credentialSource}`,
+    );
   });
 }
 

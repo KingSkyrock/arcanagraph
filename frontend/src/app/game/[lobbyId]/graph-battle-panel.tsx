@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import katex from "katex";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -9,12 +10,18 @@ import type {
 } from "@mediapipe/tasks-vision";
 import type { Socket } from "socket.io-client";
 import { apiUrl } from "@/lib/api";
-import type { LobbyMatch, LobbyPlayer } from "@/lib/types";
+import {
+  formatPrimaryHandLabel,
+  usePrimaryHandPreference,
+} from "@/lib/hand-preference";
+import type { AppUser, LobbyMatch, LobbyPlayer } from "@/lib/types";
 import styles from "./page.module.css";
 import {
   drawGrid,
   drawGroundTruth,
   equationConfigFromDescriptor,
+  filterEquationFamilies,
+  formatSkillFamilyLabel,
   parseEquationCsv,
   scoreDrawing,
   selectRandomEquation,
@@ -31,7 +38,10 @@ type GraphBattlePanelProps = {
   opponents: LobbyPlayer[];
   selectedTargetId: string | null;
   disabled: boolean;
+  sessionUser?: AppUser | null;
+  sessionReady?: boolean;
   solo?: boolean;
+  soloSkillFamily?: string | null;
   onSuccessfulScore: (targetUserId: string, trails: Record<string, unknown>) => Promise<{ total: number; shape: number; position: number } | undefined>;
   socket?: Socket | null;
   lobbyId?: string;
@@ -83,6 +93,10 @@ function formatPlayerName(player: Pick<LobbyPlayer, "displayName">) {
   return player.displayName || "Unknown player";
 }
 
+function isSoloGuestPlayer(player: Pick<LobbyPlayer, "userId">) {
+  return player.userId === "solo-guest";
+}
+
 function getHealthPercent(match: LobbyMatch | null, userId: string) {
   if (!match) {
     return 0;
@@ -103,7 +117,10 @@ export function GraphBattlePanel({
   opponents,
   selectedTargetId,
   disabled,
+  sessionUser = null,
+  sessionReady = false,
   solo = false,
+  soloSkillFamily = null,
   onSuccessfulScore,
   socket,
   lobbyId,
@@ -112,6 +129,9 @@ export function GraphBattlePanel({
   const opponentContainerRef = useRef<HTMLDivElement | null>(null);
   const opponentCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const helpButtonRef = useRef<HTMLButtonElement | null>(null);
+  const helpDialogRef = useRef<HTMLDivElement | null>(null);
+  const helpCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const gridRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef<HTMLCanvasElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
@@ -121,10 +141,12 @@ export function GraphBattlePanel({
   const disabledRef = useRef(disabled);
   const onSuccessfulScoreRef = useRef(onSuccessfulScore);
   const soloRef = useRef(solo);
+  const soloSkillFamilyRef = useRef<string | null>(soloSkillFamily);
   const resetSessionRef = useRef<() => void>(() => undefined);
   const nextEquationRef = useRef<() => void>(() => undefined);
   const animationFrameRef = useRef<number | null>(null);
   const timeoutIdsRef = useRef<number[]>([]);
+  const showHowToPlayRef = useRef(false);
   const familiesRef = useRef<EquationFamily[]>([]);
   const equationConfigRef = useRef<EquationConfig | null>(null);
   const [trackingStatus, setTrackingStatus] = useState("Loading graph battle...");
@@ -133,9 +155,15 @@ export function GraphBattlePanel({
   const [equationMarkup, setEquationMarkup] = useState("");
   const [localError, setLocalError] = useState("");
   const [lockedTargetId, setLockedTargetId] = useState<string | null>(null);
-  const [learnMode, setLearnMode] = useState(Boolean(solo));
-  const learnModeRef = useRef(Boolean(solo));
-  const redrawGridRef = useRef<() => void>(() => undefined);
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const {
+    primaryHand,
+    source: primaryHandSource,
+    ready: primaryHandReady,
+    saving: savingPrimaryHand,
+    error: primaryHandError,
+    savePrimaryHand,
+  } = usePrimaryHandPreference(sessionUser, sessionReady);
 
   const selectedOpponent = useMemo(
     () =>
@@ -166,10 +194,109 @@ export function GraphBattlePanel({
 
   useEffect(() => {
     soloRef.current = solo;
-    const nextLearnMode = Boolean(solo);
-    learnModeRef.current = nextLearnMode;
-    setLearnMode(nextLearnMode);
   }, [solo]);
+
+  useEffect(() => {
+    soloSkillFamilyRef.current = soloSkillFamily;
+  }, [soloSkillFamily]);
+
+  useEffect(() => {
+    if (!solo || !familiesRef.current.length) {
+      return;
+    }
+
+    resetSessionRef.current();
+    nextEquationRef.current();
+  }, [solo, soloSkillFamily]);
+
+  useEffect(() => {
+    if (!sessionReady || !primaryHandReady) {
+      setTrackingStatus("Loading your hand-tracking setup...");
+      return;
+    }
+
+    if (!primaryHand) {
+      setTrackingStatus("Choose your primary hand to start hand tracking.");
+    }
+  }, [primaryHand, primaryHandReady, sessionReady]);
+
+  useEffect(() => {
+    showHowToPlayRef.current = showHowToPlay;
+  }, [showHowToPlay]);
+
+  useEffect(() => {
+    if (!showHowToPlay) {
+      return;
+    }
+
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = helpDialogRef.current;
+    const preferredFocusTarget = helpCloseButtonRef.current ?? dialog;
+
+    preferredFocusTarget?.focus();
+
+    function getFocusableElements() {
+      if (!dialog) {
+        return [];
+      }
+
+      return Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute("disabled"));
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowHowToPlay(false);
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const focusable = getFocusableElements();
+
+      if (!focusable.length) {
+        event.preventDefault();
+        dialog?.focus();
+        return;
+      }
+
+      const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
+      const goingBackward = event.shiftKey;
+      const nextIndex =
+        currentIndex === -1
+          ? goingBackward
+            ? focusable.length - 1
+            : 0
+          : goingBackward
+            ? (currentIndex - 1 + focusable.length) % focusable.length
+            : (currentIndex + 1) % focusable.length;
+
+      event.preventDefault();
+      focusable[nextIndex]?.focus();
+    }
+
+    function restoreFocus() {
+      if (previouslyFocused?.isConnected) {
+        previouslyFocused.focus();
+        return;
+      }
+
+      helpButtonRef.current?.focus();
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      restoreFocus();
+    };
+  }, [showHowToPlay]);
 
   useEffect(() => {
     const video = videoRef.current!;
@@ -190,6 +317,16 @@ export function GraphBattlePanel({
     ) {
       return;
     }
+
+    if (!sessionReady || !primaryHandReady) {
+      return;
+    }
+
+    if (!primaryHand) {
+      return;
+    }
+
+    const trackedHand = primaryHand;
 
     const overlayContext = overlayCanvas.getContext("2d")!;
     const drawingContext = drawCanvas.getContext("2d")!;
@@ -282,6 +419,27 @@ export function GraphBattlePanel({
       timeoutIdsRef.current = [];
     }
 
+    function registerWhenHelpClosed(action: () => void, delayMs: number) {
+      const schedule = (nextDelayMs: number) => {
+        registerTimeout(
+          window.setTimeout(() => {
+            if (cancelled) {
+              return;
+            }
+
+            if (showHowToPlayRef.current) {
+              schedule(180);
+              return;
+            }
+
+            action();
+          }, nextDelayMs),
+        );
+      };
+
+      schedule(delayMs);
+    }
+
     function resizeAttackCanvas() {
       attackLayer.width = window.innerWidth;
       attackLayer.height = window.innerHeight;
@@ -296,16 +454,7 @@ export function GraphBattlePanel({
         }),
       );
       drawGrid(gridContext);
-      if (learnModeRef.current) {
-        drawGroundTruth(gridContext, config);
-      }
-    }
-
-    function redrawCurrentGrid() {
-      drawGrid(gridContext);
-      if (learnModeRef.current && equationConfigRef.current) {
-        drawGroundTruth(gridContext, equationConfigRef.current);
-      }
+      drawGroundTruth(gridContext, config);
     }
 
     function chooseNextEquation() {
@@ -322,6 +471,7 @@ export function GraphBattlePanel({
 
             if (result?.ok && result.data?.equation) {
               const config = equationConfigFromDescriptor(result.data.equation);
+              setLocalError("");
               renderEquation(config);
               setScoreDisplay("");
             } else {
@@ -332,17 +482,30 @@ export function GraphBattlePanel({
         return;
       }
 
-      chooseLocalEquation();
-    }
-
-    function chooseLocalEquation() {
+      // Solo mode: pick locally with skill family filter
       const families = familiesRef.current;
 
       if (!families.length) {
         return;
       }
 
-      renderEquation(selectRandomEquation(families));
+      const filteredFamilies = soloRef.current
+        ? filterEquationFamilies(families, {
+            skillFamily: soloSkillFamilyRef.current,
+          })
+        : families;
+
+      if (!filteredFamilies.length) {
+        setLocalError(
+          soloSkillFamilyRef.current
+            ? `No graph equations are available for ${formatSkillFamilyLabel(soloSkillFamilyRef.current)} yet.`
+            : "No graph equations are available right now.",
+        );
+        return;
+      }
+
+      setLocalError("");
+      renderEquation(selectRandomEquation(filteredFamilies));
       setScoreDisplay("");
     }
 
@@ -381,26 +544,23 @@ export function GraphBattlePanel({
     }
 
     function scheduleNextRound(delayMs: number) {
-      registerTimeout(
-        window.setTimeout(() => {
-          if (cancelled) {
-            return;
-          }
+      registerWhenHelpClosed(() => {
+        if (cancelled) {
+          return;
+        }
 
-          resetSession();
-          chooseNextEquation();
-        }, delayMs),
-      );
+        resetSession();
+        chooseNextEquation();
+      }, delayMs);
     }
 
     function launchAttack(score: number) {
-      const opponentTarget = opponentCanvasRef.current ?? targetContainer;
-      if (score < 50 || !opponentTarget) {
+      if (score < 50 || !targetContainer) {
         return;
       }
 
       const playerRect = battleContainer.getBoundingClientRect();
-      const opponentRect = opponentTarget.getBoundingClientRect();
+      const opponentRect = targetContainer.getBoundingClientRect();
       const startX = playerRect.left + playerRect.width / 2;
       const startY = playerRect.top + playerRect.height / 2;
       const endX = opponentRect.left + opponentRect.width / 2;
@@ -787,7 +947,9 @@ export function GraphBattlePanel({
         runtimeVideo.play().catch(() => resolve());
       });
 
-      setTrackingStatus("Draw with your index finger, then hold an open palm to grade.");
+      setTrackingStatus(
+        `Tracking your ${formatPrimaryHandLabel(trackedHand).toLowerCase()}. Draw with your index finger, then hold an open palm to grade.`,
+      );
     }
 
     function detect() {
@@ -796,6 +958,15 @@ export function GraphBattlePanel({
       }
 
       const now = performance.now();
+
+      if (showHowToPlayRef.current) {
+        openPalmDetected = false;
+        openPalmStart = 0;
+        overlayContext.clearRect(0, 0, DRAW_WIDTH, DRAW_HEIGHT);
+        animationFrameRef.current = window.requestAnimationFrame(detect);
+        return;
+      }
+
       updateAndDrawAttack();
 
       if (
@@ -826,7 +997,16 @@ export function GraphBattlePanel({
           const gestureResults = gestureRecognizer.recognizeForVideo(runtimeVideo, now + 0.1);
           let palmNow = false;
 
-          for (const gestureList of gestureResults.gestures ?? []) {
+          for (let gestureIndex = 0; gestureIndex < (gestureResults.gestures?.length ?? 0); gestureIndex += 1) {
+            const gestureList = gestureResults.gestures?.[gestureIndex] ?? [];
+            const gestureHand =
+              gestureResults.handedness?.[gestureIndex]?.[0]?.categoryName ??
+              gestureResults.handednesses?.[gestureIndex]?.[0]?.categoryName;
+
+            if (gestureHand !== trackedHand) {
+              continue;
+            }
+
             if (gestureList[0]?.categoryName === "Open_Palm") {
               palmNow = true;
               break;
@@ -889,46 +1069,42 @@ export function GraphBattlePanel({
           setLockedTargetId(targetUserId);
           // Launch attack after 900ms delay to let the count-up animation finish first,
           // matching the original computervision/index.html timing.
-          registerTimeout(
-            window.setTimeout(() => {
-              if (cancelled) {
-                return;
-              }
+          registerWhenHelpClosed(() => {
+            if (cancelled) {
+              return;
+            }
 
-              launchAttack(score.total);
-            }, 900),
-          );
-          registerTimeout(
-            window.setTimeout(() => {
-              if (!targetUserId || cancelled) {
-                return;
-              }
+            launchAttack(score.total);
+          }, 900);
+          registerWhenHelpClosed(() => {
+            if (cancelled) {
+              return;
+            }
 
-              void onSuccessfulScoreRef
-                .current(targetUserId, { Left: [...trails.Left], Right: [...trails.Right] })
-                .then((serverScore) => {
-                  if (!cancelled) {
-                    setLocalError("");
-                    const displayTotal = serverScore?.total ?? score.total;
-                    setScoreDisplay(
-                      `Score: ${displayTotal} (Shape: ${serverScore?.shape ?? score.shape}, Pos: ${serverScore?.position ?? score.position})`,
-                    );
-                    setTrackingStatus(
-                      `Graph cast landed on ${targetName} with a ${displayTotal}% score.`,
-                    );
-                  }
-                })
-                .catch((error: unknown) => {
-                  if (!cancelled) {
-                    setLocalError(
-                      error instanceof Error
-                        ? error.message
-                        : "The graph score could not be applied to the match.",
-                    );
-                  }
-                });
-            }, 900),
-          );
+            void onSuccessfulScoreRef
+              .current(targetUserId, { Left: [...trails.Left], Right: [...trails.Right] })
+              .then((serverScore) => {
+                if (!cancelled) {
+                  setLocalError("");
+                  const displayTotal = serverScore?.total ?? score.total;
+                  setScoreDisplay(
+                    `Score: ${displayTotal} (Shape: ${serverScore?.shape ?? score.shape}, Pos: ${serverScore?.position ?? score.position})`,
+                  );
+                  setTrackingStatus(
+                    `Graph cast landed on ${targetName} with a ${displayTotal}% score.`,
+                  );
+                }
+              })
+              .catch((error: unknown) => {
+                if (!cancelled) {
+                  setLocalError(
+                    error instanceof Error
+                      ? error.message
+                      : "The graph score could not be applied to the match.",
+                  );
+                }
+              });
+          }, 900);
         } else if (score.total >= 50 && !selectedTargetIdRef.current) {
           setLocalError("Choose an opponent first so your next passing graph can deal damage.");
         } else if (score.total >= 50 && disabledRef.current) {
@@ -970,6 +1146,15 @@ export function GraphBattlePanel({
           const label = results.handednesses[handIndex]?.[0]?.categoryName as HandLabel | undefined;
 
           if (label !== "Left" && label !== "Right") {
+            continue;
+          }
+
+          if (label !== trackedHand) {
+            if (wasDrawing[label]) {
+              trails[label].push(null);
+            }
+
+            resetTrackingState(label);
             continue;
           }
 
@@ -1254,7 +1439,7 @@ export function GraphBattlePanel({
             delegate: "GPU",
           },
           runningMode: "VIDEO",
-          numHands: 1,
+          numHands: 2,
         });
         if (cancelled) { gestureRecognizer.close(); gestureRecognizer = null; return; }
 
@@ -1287,7 +1472,6 @@ export function GraphBattlePanel({
       resetSession();
       chooseNextEquation();
     };
-    redrawGridRef.current = redrawCurrentGrid;
 
     resizeAttackCanvas();
     drawGrid(gridContext);
@@ -1313,7 +1497,7 @@ export function GraphBattlePanel({
 
       runtimeVideo.srcObject = null;
     };
-  }, []);
+  }, [primaryHand, primaryHandReady, sessionReady]);
 
   // Frame streaming: capture composite frames and send to opponent via socket
   useEffect(() => {
@@ -1417,6 +1601,25 @@ export function GraphBattlePanel({
           <h2>{solo ? "Trace the equation to score points" : "Trace the equation to cast damage"}</h2>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            type="button"
+            className={styles.helpButton}
+            aria-label="How to play"
+            ref={helpButtonRef}
+            onClick={() => setShowHowToPlay(true)}
+          >
+            ?
+          </button>
+          {primaryHand ? (
+            <span className={styles.state}>
+              Tracking {formatPrimaryHandLabel(primaryHand)}
+            </span>
+          ) : null}
+          {solo && soloSkillFamily ? (
+            <span className={styles.state}>
+              {formatSkillFamilyLabel(soloSkillFamily)}
+            </span>
+          ) : null}
           {cameraBlocked ? (
             <button
               type="button"
@@ -1430,7 +1633,11 @@ export function GraphBattlePanel({
                     await v.play();
                     setCameraBlocked(false);
                     setLocalError("");
-                    setTrackingStatus("Camera connected. Draw with your index finger, then hold an open palm to grade.");
+                    setTrackingStatus(
+                      primaryHand
+                        ? `Tracking your ${formatPrimaryHandLabel(primaryHand).toLowerCase()}. Draw with your index finger, then hold an open palm to grade.`
+                        : "Camera connected. Choose your primary hand to start tracking.",
+                    );
                   }
                 } catch {
                   setLocalError("Camera access was denied. Check your browser permissions and try again.");
@@ -1446,139 +1653,245 @@ export function GraphBattlePanel({
         </div>
       </div>
 
-      <div className={solo ? styles.cvBattleLayoutSolo : styles.cvBattleLayout}>
-        <div ref={containerRef} className={styles.cvContainer}>
-          <video ref={videoRef} className={styles.cvVideo} autoPlay muted playsInline />
-          <canvas
-            ref={gridRef}
-            className={styles.cvGrid}
-            width={DRAW_WIDTH}
-            height={DRAW_HEIGHT}
-          />
-          <canvas
-            ref={drawingRef}
-            className={styles.cvDrawing}
-            width={DRAW_WIDTH}
-            height={DRAW_HEIGHT}
-          />
-          <canvas
-            ref={overlayRef}
-            className={styles.cvOverlay}
-            width={DRAW_WIDTH}
-            height={DRAW_HEIGHT}
-          />
-        </div>
+      {!sessionReady || !primaryHandReady || !primaryHand ? (
+        <div className={styles.panel}>
+          <p className={styles.label}>Primary hand required</p>
+          <h2>Which hand should Arcanagraph track?</h2>
+          <p className={styles.muted}>
+            {sessionReady
+              ? sessionUser
+                ? "We will save this to your player profile and ignore input from the other hand until you change it."
+                : "We will save this in this browser and ignore input from the other hand until you change it."
+              : "Loading where your hand preference should be stored..."}
+          </p>
+          <div className={styles.links}>
+            {(["Left", "Right"] as const).map((option) => {
+              const isSelected = primaryHand === option;
 
-        {solo ? (
-          <div
-            className={styles.cvEquation}
-            dangerouslySetInnerHTML={{
-              __html:
-                equationMarkup ||
-                katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
-            }}
-          />
-        ) : (
-          <div className={styles.cvSideColumn}>
-            <div ref={opponentContainerRef} className={styles.cvOpponent}>
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className={isSelected ? styles.attackButton : styles.linkButton}
+                  onClick={() => void savePrimaryHand(option)}
+                  disabled={!sessionReady || savingPrimaryHand}
+                >
+                  {savingPrimaryHand && isSelected
+                    ? "Saving..."
+                    : isSelected
+                      ? `${formatPrimaryHandLabel(option)} selected`
+                      : `Use ${formatPrimaryHandLabel(option)}`}
+                </button>
+              );
+            })}
+            <Link className={styles.linkButton} href="/settings">
+              Open settings
+            </Link>
+          </div>
+          {sessionReady ? (
+            <p className={styles.muted}>
+              {primaryHandSource === "profile"
+                ? "Your player profile already has a saved hand preference."
+                : primaryHandSource === "local"
+                  ? "A local hand choice was found and will be reused here."
+                  : "No hand preference is saved yet."}
+            </p>
+          ) : null}
+          {primaryHandError ? <p className={styles.error}>{primaryHandError}</p> : null}
+        </div>
+      ) : (
+        <>
+          <div className={solo ? styles.cvBattleLayoutSolo : styles.cvBattleLayout}>
+            <div ref={containerRef} className={styles.cvContainer}>
+              <video ref={videoRef} className={styles.cvVideo} autoPlay muted playsInline />
               <canvas
-                ref={opponentCanvasRef}
-                width={320}
-                height={240}
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  borderRadius: 12,
-                  background: "#0a0a1a",
-                  display: "block",
-                }}
+                ref={gridRef}
+                className={styles.cvGrid}
+                width={DRAW_WIDTH}
+                height={DRAW_HEIGHT}
               />
-              <div className={styles.cvOpponentCard}>
-                {selectedOpponent ? (
-                  <>
-                    <strong>{formatPlayerName(selectedOpponent)}</strong>
-                    <div className={styles.healthTrack} aria-hidden="true">
-                      <div className={styles.healthFill} style={{ width: `${selectedOpponentHealth}%` }} />
-                    </div>
-                  </>
-                ) : (
-                  <span className={styles.meta}>Pick an opponent from the player list.</span>
-                )}
-              </div>
+              <canvas
+                ref={drawingRef}
+                className={styles.cvDrawing}
+                width={DRAW_WIDTH}
+                height={DRAW_HEIGHT}
+              />
+              <canvas
+                ref={overlayRef}
+                className={styles.cvOverlay}
+                width={DRAW_WIDTH}
+                height={DRAW_HEIGHT}
+              />
             </div>
 
-            <div
-              className={styles.cvEquation}
-              dangerouslySetInnerHTML={{
-                __html:
-                  equationMarkup ||
-                  katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
-              }}
-            />
-          </div>
-        )}
-      </div>
-
-      <canvas ref={attackCanvasRef} className={styles.cvAttackCanvas} />
-
-      <div className={styles.cvControls}>
-        <div className={styles.cvControlGroup}>
-          <button
-            type="button"
-            className={styles.linkButton}
-            onClick={() => {
-              setLocalError("");
-              resetSessionRef.current();
-            }}
-          >
-            Clear
-          </button>
-          <button
-            type="button"
-            className={styles.linkButton}
-            onClick={() => {
-              setLocalError("");
-              nextEquationRef.current();
-            }}
-          >
-            New Equation
-          </button>
-        </div>
-        <span className={styles.scoreDisplay}>{scoreDisplay || "Score: waiting for trace"}</span>
-      </div>
-
-      {solo ? (
-        <div className={styles.cvLearnToggle}>
-          <label className={styles.toggleLabel}>
-            <span>Learn Mode</span>
-            <button
-              type="button"
-              className={styles.toggleSwitch}
-              role="switch"
-              aria-checked={learnMode}
-              onClick={() => {
-                const next = !learnMode;
-                setLearnMode(next);
-                learnModeRef.current = next;
-                redrawGridRef.current();
-              }}
-            >
-              <span
-                className={styles.toggleKnob}
-                style={{ transform: learnMode ? "translateX(20px)" : "translateX(0)" }}
+            {solo ? (
+              <div
+                className={styles.cvEquation}
+                dangerouslySetInnerHTML={{
+                  __html:
+                    equationMarkup ||
+                    katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
+                }}
               />
-            </button>
-          </label>
-          <span className={styles.learnInfo} title="Learn Mode ON: the correct graph is shown as a guide while you trace. OFF: you must draw from the equation alone.">
-            i
-          </span>
+            ) : (
+              <div className={styles.cvSideColumn}>
+                <div ref={opponentContainerRef} className={styles.cvOpponent}>
+                  <canvas
+                    ref={opponentCanvasRef}
+                    width={320}
+                    height={240}
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      borderRadius: 12,
+                      background: "#0a0a1a",
+                      display: "block",
+                    }}
+                  />
+                  <div className={styles.cvOpponentCard}>
+                    {selectedOpponent ? (
+                      <>
+                        <strong>{formatPlayerName(selectedOpponent)}</strong>
+                        <div className={styles.healthTrack} aria-hidden="true">
+                          <div className={styles.healthFill} style={{ width: `${selectedOpponentHealth}%` }} />
+                        </div>
+                      </>
+                    ) : (
+                      <span className={styles.meta}>Pick an opponent from the player list.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  className={styles.cvEquation}
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      equationMarkup ||
+                      katex.renderToString("y = x", { throwOnError: false, displayMode: true }),
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          <canvas ref={attackCanvasRef} className={styles.cvAttackCanvas} />
+
+          <div className={styles.cvControls}>
+            <div className={styles.cvControlGroup}>
+              <button
+                type="button"
+                className={styles.linkButton}
+                onClick={() => {
+                  setLocalError("");
+                  resetSessionRef.current();
+                }}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                className={styles.linkButton}
+                onClick={() => {
+                  setLocalError("");
+                  nextEquationRef.current();
+                }}
+              >
+                New Equation
+              </button>
+            </div>
+            <span className={styles.scoreDisplay}>{scoreDisplay || "Score: waiting for trace"}</span>
+          </div>
+
+          <p className={styles.muted}>
+            {solo && isSoloGuestPlayer(currentPlayer)
+              ? `${trackingStatus} Practicing as ${formatPlayerName(currentPlayer)}.`
+              : `${trackingStatus} Signed in as ${formatPlayerName(currentPlayer)}.`}
+          </p>
+          {primaryHandError ? <p className={styles.error}>{primaryHandError}</p> : null}
+          {localError ? <p className={styles.error}>{localError}</p> : null}
+        </>
+      )}
+
+      {showHowToPlay ? (
+        <div
+          className={styles.modalBackdrop}
+          role="presentation"
+          onClick={() => setShowHowToPlay(false)}
+        >
+          <div
+            className={styles.modalCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="graph-battle-help-title"
+            tabIndex={-1}
+            ref={helpDialogRef}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <p className={styles.label}>How To Play</p>
+                <h2 id="graph-battle-help-title">Use simple hand shapes to cast</h2>
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseButton}
+                aria-label="Close how to play"
+                ref={helpCloseButtonRef}
+                onClick={() => setShowHowToPlay(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            <p className={styles.copy}>
+              Keep your chosen hand in view of the camera. The game only listens to
+              a few gestures while you trace.
+            </p>
+
+            <div className={styles.helpStepGrid}>
+              <article className={styles.helpStepCard}>
+                <div className={styles.helpStepIcon} aria-hidden="true">
+                  ☝️
+                </div>
+                <div className={styles.helpStepBody}>
+                  <strong>Point with your index finger to draw</strong>
+                  <p className={styles.muted}>
+                    Trace the graph with one pointed index finger. That is the only
+                    hand shape that adds to your drawing path.
+                  </p>
+                </div>
+              </article>
+
+              <article className={styles.helpStepCard}>
+                <div className={styles.helpStepIconGroup} aria-hidden="true">
+                  <span className={styles.helpStepIcon}>✊</span>
+                  <span className={styles.helpStepIcon}>✌️</span>
+                </div>
+                <div className={styles.helpStepBody}>
+                  <strong>Fists and peace signs do nothing</strong>
+                  <p className={styles.muted}>
+                    If your hand is closed or making a peace sign, the game ignores
+                    it. Those shapes will not draw and will not submit your answer.
+                  </p>
+                </div>
+              </article>
+
+              <article className={styles.helpStepCard}>
+                <div className={styles.helpStepIcon} aria-hidden="true">
+                  🖐️
+                </div>
+                <div className={styles.helpStepBody}>
+                  <strong>Show an open palm to finish</strong>
+                  <p className={styles.muted}>
+                    Turn your palm toward the camera when you are done drawing. That
+                    starts grading and tells the game to score your trace.
+                  </p>
+                </div>
+              </article>
+            </div>
+          </div>
         </div>
       ) : null}
-
-      <p className={styles.muted}>
-        {trackingStatus} Signed in as {formatPlayerName(currentPlayer)}.
-      </p>
-      {localError ? <p className={styles.error}>{localError}</p> : null}
     </section>
   );
 }
