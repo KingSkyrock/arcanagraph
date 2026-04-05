@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ArcanaGraph - Hand Tracking</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+    h1 { margin-bottom: 16px; color: #c4a0ff; }
+    #container {
+      position: relative;
+      width: 860px;
+      height: 620px;
+      overflow: hidden;
+    }
+    video {
+      position: absolute;
+      top: 0; left: 0;
+      width: 860px;
+      height: 620px;
+      transform: scaleX(-1);
+      object-fit: cover;
+    }
+    #overlay, #drawing, #grid {
+      position: absolute;
+      top: 70px;
+      left: 110px;
+      width: 640px;
+      height: 480px;
+    }
+    #overlay { transform: scaleX(-1); }
+    #drawing { transform: scaleX(-1); }
+    #grid { pointer-events: none; mix-blend-mode: difference; }
+    #equationDisplay {
+      margin-top: 12px;
+      padding: 12px 24px;
+      background: rgba(20, 10, 40, 0.85);
+      border: 1px solid #c4a0ff;
+      border-radius: 8px;
+      font-size: 28px;
+      color: #e0e0e0;
+      text-align: center;
+    }
+    #status {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <h1>ArcanaGraph - Hand Tracking</h1>
+  <div id="equationDisplay"></div>
+  <div id="container">
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="grid" width="640" height="480"></canvas>
+    <canvas id="drawing" width="640" height="480"></canvas>
+    <canvas id="overlay" width="640" height="480"></canvas>
+  </div>
+  <div id="status">Loading MediaPipe...</div>
+  <div style="margin-top: 8px; display: flex; gap: 8px;">
+<button id="clearBtn" style="padding: 8px 16px; background: #444; color: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Clear</button>
+    <button id="newEqBtn" style="padding: 8px 16px; background: #448; color: #e0e0e0; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">New Equation</button>
+    <span id="scoreDisplay" style="padding: 8px; font-size: 18px; color: #ffd700;"></span>
+  </div>
+
+  <script type="module">
+    import { HandLandmarker, GestureRecognizer, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs";
+
+    const video = document.getElementById("webcam");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
+    const drawCanvas = document.getElementById("drawing");
+    const drawCtx = drawCanvas.getContext("2d");
+    const gridCanvas = document.getElementById("grid");
+    const gridCtx = gridCanvas.getContext("2d");
+    const status = document.getElementById("status");
+
+    // graph config — adjust these per equation
+    const graphConfig = {
+      centerX: 320,  // pixel position of origin
+      centerY: 240,
+      pxPerUnit: 60  // pixels per graph unit (scale)
+    };
+
+    function drawGrid() {
+      const { centerX, centerY, pxPerUnit } = graphConfig;
+      const W = 640, H = 480;
+      gridCtx.clearRect(0, 0, W, H);
+
+      // minor gridlines
+      gridCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+      gridCtx.lineWidth = 1;
+      for (let px = centerX % pxPerUnit; px < W; px += pxPerUnit) {
+        gridCtx.beginPath();
+        gridCtx.moveTo(px, 0);
+        gridCtx.lineTo(px, H);
+        gridCtx.stroke();
+      }
+      for (let py = centerY % pxPerUnit; py < H; py += pxPerUnit) {
+        gridCtx.beginPath();
+        gridCtx.moveTo(0, py);
+        gridCtx.lineTo(W, py);
+        gridCtx.stroke();
+      }
+
+      // axes
+      gridCtx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+      gridCtx.lineWidth = 2;
+      // x-axis
+      gridCtx.beginPath();
+      gridCtx.moveTo(0, centerY);
+      gridCtx.lineTo(W, centerY);
+      gridCtx.stroke();
+      // y-axis
+      gridCtx.beginPath();
+      gridCtx.moveTo(centerX, 0);
+      gridCtx.lineTo(centerX, H);
+      gridCtx.stroke();
+
+      // axis labels
+      gridCtx.fillStyle = "rgba(255, 255, 255, 0.7)";
+      gridCtx.font = "12px system-ui";
+      gridCtx.textAlign = "center";
+      gridCtx.textBaseline = "top";
+
+      // x-axis labels
+      const xMin = Math.ceil(-centerX / pxPerUnit);
+      const xMax = Math.floor((W - centerX) / pxPerUnit);
+      for (let u = xMin; u <= xMax; u++) {
+        if (u === 0) continue;
+        const px = centerX + u * pxPerUnit;
+        gridCtx.fillText(u.toString(), px, centerY + 4);
+      }
+
+      // y-axis labels
+      gridCtx.textAlign = "right";
+      gridCtx.textBaseline = "middle";
+      const yMin = Math.ceil(-centerY / pxPerUnit);
+      const yMax = Math.floor((H - centerY) / pxPerUnit);
+      for (let u = yMin; u <= yMax; u++) {
+        if (u === 0) continue;
+        const py = centerY - u * pxPerUnit;  // y is flipped
+        gridCtx.fillText(u.toString(), centerX - 6, py);
+      }
+
+      // origin label
+      gridCtx.textAlign = "right";
+      gridCtx.textBaseline = "top";
+      gridCtx.fillText("0", centerX - 6, centerY + 4);
+    }
+
+    drawGrid();
+
+    // equation bank — loaded from CSV
+    let equationFamilies = [];
+    let equationConfig = null;
+
+    async function loadEquations() {
+      let resp = await fetch("../data/advanced_equations.csv");
+      if (!resp.ok) { console.error("Failed to load CSV:", resp.status); return; }
+      const text = await resp.text();
+      const lines = text.trim().split("\n");
+      const headers = lines[0].split(",");
+
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        // proper CSV parse: handle quoted fields with commas
+        const row = [];
+        let cur = "", inQuotes = false;
+        for (const ch of lines[i]) {
+          if (ch === '"') { inQuotes = !inQuotes; }
+          else if (ch === ',' && !inQuotes) { row.push(cur.trim()); cur = ""; }
+          else { cur += ch; }
+        }
+        row.push(cur.trim());
+        if (row.length < headers.length) continue;
+        const entry = {};
+        headers.forEach((h, j) => entry[h.trim()] = row[j]);
+        equationFamilies.push(entry);
+      }
+      console.log(`Loaded ${equationFamilies.length} equation families`);
+    }
+
+    function parseParamRanges(rangeStr) {
+      // "a:-3:3:1|b:1:5:0.5" → { a: [ranges], b: [ranges] }
+      const params = {};
+      for (const part of rangeStr.split("|")) {
+        const [name, min, max, step] = part.split(":");
+        if (!params[name]) params[name] = [];
+        params[name].push({ min: +min, max: +max, step: +step });
+      }
+      return params;
+    }
+
+    function sampleParam(ranges) {
+      // pick a random range, then a random value within it
+      const range = ranges[Math.floor(Math.random() * ranges.length)];
+      const steps = Math.round((range.max - range.min) / range.step);
+      const idx = Math.floor(Math.random() * (steps + 1));
+      const val = range.min + idx * range.step;
+      // avoid zero for most params (boring)
+      if (val === 0 && Math.random() > 0.2) return sampleParam(ranges);
+      return Math.round(val * 1000) / 1000;
+    }
+
+    // leading coefficient param for each skill family (must not be zero)
+    const LEADING_COEFF = {
+      quadratic: "a", cubic: "a", exponential: "a",
+      absolute_value: "a", square_root: "a"
+    };
+
+    function generateEquation(family) {
+      const paramRanges = parseParamRanges(family.param_ranges);
+      const values = {};
+      const leadingParam = LEADING_COEFF[family.skill_family];
+
+      for (const [name, ranges] of Object.entries(paramRanges)) {
+        let val = sampleParam(ranges);
+        // leading coefficient must not be zero
+        if (name === leadingParam) {
+          while (val === 0) val = sampleParam(ranges);
+        }
+        values[name] = val;
+      }
+
+      // substitute into display template
+      let label = family.display_template;
+      for (const [k, v] of Object.entries(values)) {
+        label = label.replaceAll(`{${k}}`, v);
+      }
+      // clean up display: remove coefficient of 1
+      label = label.replace(/(?<![0-9.])1(x|sin|cos|√|∣|\|)/g, '$1');
+      label = label.replace(/(?<![0-9.])-1(x|sin|cos|√|∣|\|)/g, '-$1');
+      label = label.replace(/\+ -/g, '- ');
+
+      // convert display label to LaTeX
+      let latex = label;
+      latex = latex.replace(/²/g, '^{2}');
+      latex = latex.replace(/³/g, '^{3}');
+      latex = latex.replace(/√\(([^)]+)\)/g, '\\sqrt{$1}');
+      latex = latex.replace(/√/g, '\\sqrt');
+      latex = latex.replace(/\|([^|]+)\|/g, '\\left|$1\\right|');
+      latex = latex.replace(/sin/g, '\\sin');
+      latex = latex.replace(/cos/g, '\\cos');
+      latex = latex.replace(/·/g, '\\cdot ');
+
+      // substitute into js template and create function
+      let jsExpr = family.js_template;
+      for (const [k, v] of Object.entries(values)) {
+        jsExpr = jsExpr.replaceAll(`{${k}}`, v);
+      }
+
+      if (family.type === "parametric_circle") {
+        const r = values.r;
+        return {
+          type: "parametric",
+          xFn: (t) => r * Math.cos(t),
+          yFn: (t) => r * Math.sin(t),
+          tMin: 0,
+          tMax: 2 * Math.PI,
+          label, latex,
+          hasTurningPoints: family.hasTurningPoints === "true",
+          fn: null
+        };
+      }
+
+      const fn = new Function("x", `return ${jsExpr};`);
+      return {
+        type: "explicit",
+        fn,
+        label, latex,
+        hasTurningPoints: family.hasTurningPoints === "true"
+      };
+    }
+
+    function selectRandomEquation(difficulty) {
+      let pool = equationFamilies;
+      if (difficulty) pool = pool.filter(f => f.difficulty === difficulty);
+      if (pool.length === 0) {
+        console.error("No equations loaded! Families:", equationFamilies.length);
+        return { type: "explicit", fn: (x) => x, label: "y = x", hasTurningPoints: false };
+      }
+      const family = pool[Math.floor(Math.random() * pool.length)];
+      return generateEquation(family);
+    }
+
+    function setEquation(config) {
+      equationConfig = config;
+      // render equation with KaTeX
+      const el = document.getElementById("equationDisplay");
+      try {
+        katex.render(config.latex || config.label, el, { throwOnError: false, displayMode: true });
+      } catch (e) {
+        el.textContent = config.label;
+      }
+      // redraw grid + ground truth
+      gridCtx.clearRect(0, 0, 640, 480);
+      drawGrid();
+      drawGroundTruth();
+    }
+
+    /* TURNING POINTS - disabled for now, re-enable later
+    function findVisibleTurningPoints(fn) {
+      const { centerX, centerY, pxPerUnit } = graphConfig;
+      const W = 640, H = 480;
+      const xMin = -centerX / pxPerUnit;
+      const xMax = (W - centerX) / pxPerUnit;
+      const yMin = -(H - centerY) / pxPerUnit;
+      const yMax = centerY / pxPerUnit;
+      const step = 0.01;
+      const h = 0.001;
+      const points = [];
+
+      let prevDeriv = (fn(xMin + h) - fn(xMin - h)) / (2 * h);
+      for (let u = xMin + step; u <= xMax; u += step) {
+        const curDeriv = (fn(u + h) - fn(u - h)) / (2 * h);
+        if (prevDeriv * curDeriv < 0) {
+          const t = Math.abs(prevDeriv) / (Math.abs(prevDeriv) + Math.abs(curDeriv));
+          const crossX = u - step + t * step;
+          const crossY = fn(crossX);
+          if (crossY >= yMin && crossY <= yMax) {
+            points.push({ x: crossX, y: crossY });
+          }
+        }
+        prevDeriv = curDeriv;
+      }
+      return points;
+    }
+    */
+
+    // find visible intercepts by sampling the curve
+    function findVisibleIntercepts() {
+      const { centerX, centerY, pxPerUnit } = graphConfig;
+      const W = 640, H = 480;
+      const yMin = -(H - centerY) / pxPerUnit;
+      const yMax = centerY / pxPerUnit;
+      const xMin = -centerX / pxPerUnit;
+      const xMax = (W - centerX) / pxPerUnit;
+      const intercepts = [];
+      const samples = sampleCurvePoints(0.01);
+
+      for (let i = 1; i < samples.length; i++) {
+        const prev = samples[i - 1];
+        const cur = samples[i];
+
+        // x-intercept: y crosses zero
+        if (prev.my * cur.my <= 0 && (Math.abs(prev.my) + Math.abs(cur.my)) > 0) {
+          const t = Math.abs(prev.my) / (Math.abs(prev.my) + Math.abs(cur.my));
+          const crossX = prev.mx + t * (cur.mx - prev.mx);
+          if (crossX >= xMin && crossX <= xMax) {
+            intercepts.push({ x: crossX, y: 0, type: "x" });
+          }
+        }
+
+        // y-intercept: x crosses zero
+        if (prev.mx * cur.mx <= 0 && (Math.abs(prev.mx) + Math.abs(cur.mx)) > 0) {
+          const t = Math.abs(prev.mx) / (Math.abs(prev.mx) + Math.abs(cur.mx));
+          const crossY = prev.my + t * (cur.my - prev.my);
+          if (crossY >= yMin && crossY <= yMax) {
+            intercepts.push({ x: 0, y: crossY, type: "y" });
+          }
+        }
+      }
+
+      return intercepts;
+    }
+
+    // sample curve points in math units — works for both explicit and parametric
+    function sampleCurvePoints(step) {
+      const { centerX, centerY, pxPerUnit } = graphConfig;
+      const W = 640;
+      const pts = [];
+
+      if (equationConfig.type === "parametric") {
+        const { xFn, yFn, tMin, tMax } = equationConfig;
+        const tStep = step || (tMax - tMin) / 400;
+        for (let t = tMin; t <= tMax; t += tStep) {
+          pts.push({ mx: xFn(t), my: yFn(t) });
+        }
+      } else {
+        const xMin = -centerX / pxPerUnit;
+        const xMax = (W - centerX) / pxPerUnit;
+        const s = step || 0.05;
+        for (let u = xMin; u <= xMax; u += s) {
+          pts.push({ mx: u, my: equationConfig.fn(u) });
+        }
+      }
+      return pts;
+    }
+
+    // convert math point to grid canvas pixel
+    function mathToGrid(mx, my) {
+      const { centerX, centerY, pxPerUnit } = graphConfig;
+      return { x: centerX + mx * pxPerUnit, y: centerY - my * pxPerUnit };
+    }
+
+    // convert math point to drawing canvas pixel (mirrored x)
+    function mathToDraw(mx, my) {
+      const { centerX, centerY, pxPerUnit } = graphConfig;
+      return { x: 640 - (centerX + mx * pxPerUnit), y: centerY - my * pxPerUnit };
+    }
+
+    // render ground truth curve on grid canvas
+    function drawGroundTruth() {
+      if (!equationConfig) return;
+      const samples = sampleCurvePoints();
+
+      gridCtx.strokeStyle = "rgba(100, 200, 255, 0.6)";
+      gridCtx.lineWidth = 2;
+      gridCtx.beginPath();
+      let started = false;
+      for (const { mx, my } of samples) {
+        const { x: px, y: py } = mathToGrid(mx, my);
+        if (py < -50 || py > 530 || px < -50 || px > 690) { started = false; continue; }
+        if (!started) { gridCtx.moveTo(px, py); started = true; }
+        else gridCtx.lineTo(px, py);
+      }
+      gridCtx.stroke();
+
+    }
+
+    // generate ground truth sample points in drawing canvas pixel coords
+    function getGroundTruthPoints() {
+      if (!equationConfig) return [];
+      const samples = sampleCurvePoints();
+      const pts = [];
+      for (const { mx, my } of samples) {
+        const { x, y } = mathToDraw(mx, my);
+        if (y >= 0 && y <= 480 && x >= 0 && x <= 640) pts.push({ x, y });
+      }
+      return pts;
+    }
+
+    function centroid(pts) {
+      let sx = 0, sy = 0;
+      for (const p of pts) { sx += p.x; sy += p.y; }
+      return { x: sx / pts.length, y: sy / pts.length };
+    }
+
+    const MIN_STROKE_POINTS = 5;
+
+    function scoreDrawing() {
+      // collect drawn points, purging noise (short strokes < MIN_STROKE_POINTS)
+      const drawn = [];
+      for (const label of ["Left", "Right"]) {
+        let stroke = [];
+        for (const pt of trails[label]) {
+          if (pt === null) {
+            if (stroke.length >= MIN_STROKE_POINTS) drawn.push(...stroke);
+            stroke = [];
+          } else {
+            stroke.push(pt);
+          }
+        }
+        if (stroke.length >= MIN_STROKE_POINTS) drawn.push(...stroke);
+      }
+      if (drawn.length < MIN_STROKE_POINTS) return { total: 0, shape: 0, position: 0 };
+
+      const truth = getGroundTruthPoints();
+      const drawnCentroid = centroid(drawn);
+      const truthCentroid = centroid(truth);
+
+      // --- Position Score (30%) --- one ICP step then SDF
+      const posAligned = drawn.map(p => ({ x: p.x, y: p.y }));
+      let posTx = 0, posTy = 0;
+      for (const dp of posAligned) {
+        let minDist = Infinity, closest = null;
+        for (const tp of truth) {
+          const d = (dp.x - tp.x) ** 2 + (dp.y - tp.y) ** 2;
+          if (d < minDist) { minDist = d; closest = tp; }
+        }
+        posTx += closest.x - dp.x;
+        posTy += closest.y - dp.y;
+      }
+      posTx /= posAligned.length;
+      posTy /= posAligned.length;
+      // half step — only move halfway to the ICP solution
+      for (const p of posAligned) { p.x += posTx * 0.5; p.y += posTy * 0.5; }
+
+      // SDF on nudged points
+      let posDist = 0;
+      for (const dp of posAligned) {
+        let minDist = Infinity;
+        for (const tp of truth) {
+          const d = Math.sqrt((dp.x - tp.x) ** 2 + (dp.y - tp.y) ** 2);
+          if (d < minDist) minDist = d;
+        }
+        posDist += minDist;
+      }
+      const posAvg = posDist / posAligned.length;
+      const positionScore = Math.max(0, 1 - posAvg / 120);
+
+      // --- Shape Score (70%) --- centered + scaled SDF
+      const drawnCentered = drawn.map(p => ({ x: p.x - drawnCentroid.x, y: p.y - drawnCentroid.y }));
+      const truthCentered = truth.map(p => ({ x: p.x - truthCentroid.x, y: p.y - truthCentroid.y }));
+
+      // pre-scale drawn to match truth extent before ICP
+      let drawnExtent = 0, truthExtent = 0;
+      for (const p of drawnCentered) drawnExtent = Math.max(drawnExtent, Math.abs(p.x), Math.abs(p.y));
+      for (const p of truthCentered) truthExtent = Math.max(truthExtent, Math.abs(p.x), Math.abs(p.y));
+      let preScale = drawnExtent > 0 ? truthExtent / drawnExtent : 1;
+      preScale = Math.max(0.5, Math.min(3, preScale));
+
+      // ICP: iteratively align drawn to truth (translation + fine scale)
+      const drawnAligned = drawnCentered.map(p => ({ x: p.x * preScale, y: p.y * preScale }));
+      let icpScale = preScale;
+      let icpTx = 0, icpTy = 0;
+
+      for (let iter = 0; iter < 10; iter++) {
+        // find closest truth point for each drawn point
+        const matches = [];
+        for (const dp of drawnAligned) {
+          let minDist = Infinity, closest = null;
+          for (const tp of truthCentered) {
+            const d = (dp.x - tp.x) ** 2 + (dp.y - tp.y) ** 2;
+            if (d < minDist) { minDist = d; closest = tp; }
+          }
+          matches.push(closest);
+        }
+
+        // compute optimal translation: average of (match - drawn)
+        let dtx = 0, dty = 0;
+        for (let i = 0; i < drawnAligned.length; i++) {
+          dtx += matches[i].x - drawnAligned[i].x;
+          dty += matches[i].y - drawnAligned[i].y;
+        }
+        dtx /= drawnAligned.length;
+        dty /= drawnAligned.length;
+
+        // apply translation
+        for (const p of drawnAligned) { p.x += dtx; p.y += dty; }
+        icpTx += dtx;
+        icpTy += dty;
+
+        // compute optimal scale: minimize sum of squared distances
+        let num = 0, den = 0;
+        for (let i = 0; i < drawnAligned.length; i++) {
+          num += drawnAligned[i].x * matches[i].x + drawnAligned[i].y * matches[i].y;
+          den += drawnAligned[i].x ** 2 + drawnAligned[i].y ** 2;
+        }
+        let ds = den > 0 ? num / den : 1;
+        ds = Math.max(0.5, Math.min(2.0, ds));
+        for (const p of drawnAligned) { p.x *= ds; p.y *= ds; }
+        icpScale *= ds;
+
+        // check convergence
+        if (Math.abs(dtx) < 0.5 && Math.abs(dty) < 0.5 && Math.abs(ds - 1) < 0.001) break;
+      }
+
+      // clamp total scale so tiny/huge drawings can't game it
+      if (icpScale < 0.5 || icpScale > 3) {
+        const clampedScale = Math.max(0.5, Math.min(3, icpScale));
+        const fix = clampedScale / icpScale;
+        for (const p of drawnAligned) { p.x *= fix; p.y *= fix; }
+        icpScale = clampedScale;
+      }
+
+      // bidirectional SDF on aligned points
+      // forward: each drawn point → closest truth point
+      let fwdDist = 0;
+      for (const dp of drawnAligned) {
+        let minDist = Infinity;
+        for (const tp of truthCentered) {
+          const d = Math.sqrt((dp.x - tp.x) ** 2 + (dp.y - tp.y) ** 2);
+          if (d < minDist) minDist = d;
+        }
+        fwdDist += minDist;
+      }
+      const fwdAvg = fwdDist / drawnAligned.length;
+
+      // reverse: each truth point → closest drawn point
+      let revDist = 0;
+      for (const tp of truthCentered) {
+        let minDist = Infinity;
+        for (const dp of drawnAligned) {
+          const d = Math.sqrt((tp.x - dp.x) ** 2 + (tp.y - dp.y) ** 2);
+          if (d < minDist) minDist = d;
+        }
+        revDist += minDist;
+      }
+      const revAvg = revDist / truthCentered.length;
+
+      const shapeAvg = (fwdAvg + revAvg) / 2;
+      const shapeScore = Math.max(0, 1 - shapeAvg / 40);
+
+      // --- Intercept Bonus (boosts position score) ---
+      const intercepts = findVisibleIntercepts();
+      const { centerX, centerY, pxPerUnit } = graphConfig;
+      const W = 640;
+      const interceptRadius = 0.4 * pxPerUnit; // 0.4 units in pixels
+      let interceptBonus = 0;
+
+      if (intercepts.length > 0) {
+        const bonusPerIntercept = 1 / intercepts.length;
+        for (const ic of intercepts) {
+          // convert intercept to drawing canvas coords (mirrored x)
+          const icPx = W - (centerX + ic.x * pxPerUnit);
+          const icPy = centerY - ic.y * pxPerUnit;
+
+          // find closest drawn point to this intercept
+          let minDist = Infinity;
+          for (const dp of drawn) {
+            const d = Math.sqrt((dp.x - icPx) ** 2 + (dp.y - icPy) ** 2);
+            if (d < minDist) minDist = d;
+          }
+
+          if (minDist < interceptRadius) {
+            // 6-15% bonus scaled by closeness, divided by number of intercepts
+            const closeness = 1 - minDist / interceptRadius;
+            const bonus = (0.06 + closeness * 0.09) * bonusPerIntercept;
+            interceptBonus += bonus;
+          }
+        }
+      }
+
+      // --- Intercept Penalty (extra/missing crossings) ---
+      const xAxisPx = centerY;
+      const yAxisPx = W - centerX;
+      let drawnXCrossings = 0;
+      let drawnYCrossings = 0;
+
+      for (const label of ["Left", "Right"]) {
+        const trail = trails[label];
+        let prev = null;
+        for (const pt of trail) {
+          if (pt === null) { prev = null; continue; }
+          if (prev) {
+            if ((prev.y - xAxisPx) * (pt.y - xAxisPx) < 0) drawnXCrossings++;
+            if ((prev.x - yAxisPx) * (pt.x - yAxisPx) < 0) drawnYCrossings++;
+          }
+          prev = pt;
+        }
+      }
+
+      const drawnCrossings = drawnXCrossings + drawnYCrossings;
+      const expectedXIntercepts = intercepts.filter(i => i.type === "x").length;
+      const expectedYIntercepts = intercepts.filter(i => i.type === "y").length;
+      const expectedCrossings = intercepts.length;
+
+      // total crossing penalty (harsher)
+      const extraCrossings = Math.max(0, drawnCrossings - expectedCrossings);
+      const missingCrossings = Math.max(0, expectedCrossings - drawnCrossings - 1);
+      const extraRatio = expectedCrossings > 0 ? extraCrossings / expectedCrossings : extraCrossings;
+      const missingRatio = expectedCrossings > 0 ? missingCrossings / expectedCrossings : missingCrossings;
+      const totalPenalty = 0.035 * (extraRatio * extraRatio + missingRatio * missingRatio) * expectedCrossings;
+
+      // separate x-axis crossing penalty (softer)
+      const extraX = Math.max(0, drawnXCrossings - expectedXIntercepts);
+      const missingX = Math.max(0, expectedXIntercepts - drawnXCrossings - 1);
+      const extraXRatio = expectedXIntercepts > 0 ? extraX / expectedXIntercepts : extraX;
+      const missingXRatio = expectedXIntercepts > 0 ? missingX / expectedXIntercepts : missingX;
+      const xPenalty = 0.015 * (extraXRatio * extraXRatio + missingXRatio * missingXRatio) * Math.max(1, expectedXIntercepts);
+
+      // separate y-axis crossing penalty (softer)
+      const extraY = Math.max(0, drawnYCrossings - expectedYIntercepts);
+      const missingY = Math.max(0, expectedYIntercepts - drawnYCrossings - 1);
+      const extraYRatio = expectedYIntercepts > 0 ? extraY / expectedYIntercepts : extraY;
+      const missingYRatio = expectedYIntercepts > 0 ? missingY / expectedYIntercepts : missingY;
+      const yPenalty = 0.015 * (extraYRatio * extraYRatio + missingYRatio * missingYRatio) * Math.max(1, expectedYIntercepts);
+
+      const interceptPenalty = totalPenalty + xPenalty + yPenalty;
+
+      /* TURNING POINTS — disabled for now, re-enable later */
+
+      let adjustedPosition = Math.min(1, Math.max(0, positionScore + interceptBonus - interceptPenalty));
+
+      console.log(`Crossings: X=${drawnXCrossings}/${expectedXIntercepts} Y=${drawnYCrossings}/${expectedYIntercepts} total penalty=${(interceptPenalty*100).toFixed(1)}%`);
+
+      // --- Shape Bonus ---
+      let shapeBonus = 0;
+      if (shapeScore > 0.90) shapeBonus = 0.04;
+      else if (shapeScore > 0.85) shapeBonus = 0.02;
+
+      let total = ((shapeScore + shapeBonus) * 0.7 + adjustedPosition * 0.3) * 100;
+      total = Math.min(99, total);
+
+      console.log(`ICP: scale=${icpScale.toFixed(3)} tx=${icpTx.toFixed(1)} ty=${icpTy.toFixed(1)} | intercepts: ${intercepts.length} bonus: ${(interceptBonus*100).toFixed(1)}%`);
+      return {
+        total: Math.round(total), shape: Math.round(shapeScore * 100), position: Math.round(adjustedPosition * 100), drawnCentroid, truthCentroid,
+        drawnScaled: drawnAligned, truthCentered
+      };
+    }
+
+    // stored debug data — rendered each frame by renderTrails
+    let shapeDebugData = null;
+
+    // load equations and draw first one
+    loadEquations().then(() => {
+      setEquation(selectRandomEquation());
+    });
+
+    // button handlers
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      trails.Left = [];
+      trails.Right = [];
+      shapeDebugData = null;
+      drawCtx.clearRect(0, 0, 640, 480);
+      document.getElementById("scoreDisplay").textContent = "";
+    });
+
+    document.getElementById("newEqBtn").addEventListener("click", () => {
+      trails.Left = [];
+      trails.Right = [];
+      shapeDebugData = null;
+      drawCtx.clearRect(0, 0, 640, 480);
+      document.getElementById("scoreDisplay").textContent = "";
+      setEquation(selectRandomEquation());
+    });
+
+    const HAND_CONNECTIONS = [
+      [0,1],[1,2],[2,3],[3,4],
+      [0,5],[5,6],[6,7],[7,8],
+      [0,9],[9,10],[10,11],[11,12],
+      [0,13],[13,14],[14,15],[15,16],
+      [0,17],[17,18],[18,19],[19,20],
+      [5,9],[9,13],[13,17]
+    ];
+
+    let handLandmarker = null;
+    let gestureRecognizer = null;
+    let lastTimestamp = -1;
+    let openPalmDetected = false;
+    let openPalmStart = 0;
+    let palmScored = false;
+
+    // drawing state per hand (keyed by "Left"/"Right" from mediapipe)
+    const trails = { Left: [], Right: [] };
+    const wasDrawing = { Left: false, Right: false };
+    // debounced drawing state per hand
+    const rawDrawing = { Left: false, Right: false };
+    const rawChangeTime = { Left: 0, Right: 0 };
+    const stableDrawing = { Left: false, Right: false };
+    const DEBOUNCE_MS = 125;
+    // rolling snapshot: trail length from TRIM_LOOKBACK_MS ago
+    const TRIM_LOOKBACK_MS = 60;
+    const trailHistory = { Left: [], Right: [] }; // ring buffer of { time, len }
+    // EMA smoothing on raw position
+    const smoothed = { Left: null, Right: null };
+    const EMA_ALPHA = 0.4; // 0 = full smooth, 1 = no smooth
+    // minimum distance between points to add to trail (px)
+    const MIN_POINT_DIST = 4;
+    const lastTrailPt = { Left: null, Right: null };
+    const lastTrailTime = { Left: 0, Right: 0 };
+    const TRAIL_TIMEOUT_MS = 500;
+    // velocity tracking
+    const lastPos = { Left: null, Right: null };
+    const lastPosTime = { Left: 0, Right: 0 };
+    const velocity = { Left: 0, Right: 0 };
+    // direction of travel (unit vector)
+    const direction = { Left: { x: 0, y: 0 }, Right: { x: 0, y: 0 } };
+    // if moving fast and detection blinks, bridge the gap instead of breaking
+    const FAST_THRESHOLD = 300; // px/sec
+    // outlier rejection: only reject extreme spikes (opposite direction + big jump)
+    const OUTLIER_ANGLE_COS = -0.7;
+    const OUTLIER_MIN_JUMP = 60;
+
+    // magic particle system
+    const particles = [];
+    const PARTICLE_COLORS = {
+      Right: ["#ffd700", "#ffaa00", "#ff6600", "#fff4b0"],
+      Left: ["#33ff33", "#00ff88", "#88ffcc", "#ccffee"]
+    };
+
+    function spawnParticles(x, y, label, speed) {
+      // more particles when moving faster
+      const count = Math.min(4, 1 + Math.floor(speed / 400));
+      const colors = PARTICLE_COLORS[label] || PARTICLE_COLORS.Right;
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const vel = 0.5 + Math.random() * 1.5;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * vel,
+          vy: Math.sin(angle) * vel - 0.5, // slight upward drift
+          life: 1.0,
+          decay: 0.015 + Math.random() * 0.02,
+          size: 2 + Math.random() * 3,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        });
+      }
+    }
+
+    function updateAndDrawParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+
+    async function init() {
+      const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
+      );
+
+      handLandmarker = await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 2
+      });
+
+      gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 1
+      });
+
+      status.textContent = "MediaPipe loaded. Starting camera...";
+      startCamera();
+    }
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480 }
+        });
+        video.srcObject = stream;
+        video.addEventListener("loadeddata", () => {
+          status.textContent = "Draw with your index finger!";
+          detect();
+        });
+      } catch (err) {
+        status.textContent = "Camera error: " + err.message;
+        console.error(err);
+      }
+    }
+
+    function detect() {
+      if (!handLandmarker) return;
+      const GRADE_TIME = 850;
+      const now = performance.now();
+      if (now === lastTimestamp) {
+        requestAnimationFrame(detect);
+        return;
+      }
+      lastTimestamp = now;
+
+      const results = handLandmarker.detectForVideo(video, now);
+
+      // check for open palm gesture every 5 frames to save perf
+      if (gestureRecognizer && Math.round(now) % 5 === 0) {
+        try {
+          const gestureResults = gestureRecognizer.recognizeForVideo(video, now + 0.1);
+          let palmNow = false;
+          if (gestureResults.gestures) {
+            for (const gestureList of gestureResults.gestures) {
+              if (gestureList[0]?.categoryName === "Open_Palm") {
+                palmNow = true;
+                break;
+              }
+            }
+          }
+          if (palmNow && !openPalmDetected) {
+            openPalmStart = now;
+          }
+          openPalmDetected = palmNow;
+        } catch (e) { /* ignore timing errors */ }
+      }
+
+      // open palm held for 1 second = auto-score (only trigger once)
+      const hasDrawing = trails.Left.some(p => p !== null) || trails.Right.some(p => p !== null);
+      if (openPalmDetected && openPalmStart > 0 && now - openPalmStart >= GRADE_TIME && !palmScored && hasDrawing) {
+        palmScored = true;
+        const s = scoreDrawing();
+        document.getElementById("scoreDisplay").textContent =
+          `Score: ${s.total} (Shape: ${s.shape}, Pos: ${s.position})`;
+        if (s.drawnScaled) {
+          shapeDebugData = { drawnScaled: s.drawnScaled, truthCentered: s.truthCentered };
+        }
+      }
+      // reset when palm goes away
+      if (!openPalmDetected) {
+        openPalmStart = 0;
+        palmScored = false;
+      }
+
+      // clear hand overlay (not the drawing canvas)
+      ctx.clearRect(0, 0, 640, 480);
+
+      // "Grading..." overlay while palm is held (fade in over 1 second)
+      if (openPalmDetected && openPalmStart > 0 && !palmScored && hasDrawing) {
+        const elapsed = now - openPalmStart;
+        const alpha = Math.min(1, elapsed / GRADE_TIME);
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.globalAlpha = alpha;
+        ctx.font = "bold 48px system-ui";
+        ctx.fillStyle = "#ffd700";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Grading...", -320, 240);
+        ctx.restore();
+      }
+
+      // track which hands are present this frame
+      const handsPresent = { Left: false, Right: false };
+
+      if (results.landmarks) {
+        for (let h = 0; h < results.landmarks.length; h++) {
+          const label = results.handednesses[h][0].categoryName;
+          handsPresent[label] = true;
+          const isRight = label === "Right";
+          const landmarks = results.landmarks[h];
+          let drawing = checkDrawing(landmarks);
+
+          // map from video space (860x620) to drawing canvas space (640x480 at offset 110,70)
+          let x = landmarks[8].x * 860 - 110;
+          let y = landmarks[8].y * 620 - 70;
+
+          // EMA smoothing
+          if (smoothed[label]) {
+            x = smoothed[label].x + EMA_ALPHA * (x - smoothed[label].x);
+            y = smoothed[label].y + EMA_ALPHA * (y - smoothed[label].y);
+          }
+          smoothed[label] = { x, y };
+
+          // reject points outside drawing canvas bounds
+          const inBounds = x >= 0 && x <= 640 && y >= 0 && y <= 480;
+          if (!inBounds) {
+            // reset all state so re-entry starts completely fresh
+            smoothed[label] = null;
+            lastPos[label] = null;
+            lastPosTime[label] = 0;
+            velocity[label] = 0;
+            direction[label] = { x: 0, y: 0 };
+            lastTrailPt[label] = null;
+            if (wasDrawing[label]) {
+              trails[label].push(null);
+              wasDrawing[label] = false;
+            }
+            rawDrawing[label] = false;
+            stableDrawing[label] = false;
+            drawHand(landmarks, isRight, false);
+            continue;
+          }
+
+          // compute velocity and detect outliers
+          let isOutlier = false;
+          if (lastPos[label] && lastPosTime[label] > 0) {
+            const dt = (now - lastPosTime[label]) / 1000;
+            const dx = x - lastPos[label].x;
+            const dy = y - lastPos[label].y;
+            const jumpDist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dt > 0) {
+              velocity[label] = jumpDist / dt;
+            }
+
+            const dirMag = Math.sqrt(direction[label].x**2 + direction[label].y**2);
+
+            // outlier: only reject big jumps that go nearly opposite to travel
+            if (jumpDist > OUTLIER_MIN_JUMP && dirMag > 0.01) {
+              const dot = (dx * direction[label].x + dy * direction[label].y) / (jumpDist * dirMag);
+              if (dot < OUTLIER_ANGLE_COS) {
+                isOutlier = true;
+              }
+            }
+
+            // update direction and position even for outliers after 3 frames
+            // prevents getting stuck in outlier cascade
+            if (!isOutlier && jumpDist > 2) {
+              direction[label].x = direction[label].x * 0.7 + dx * 0.3;
+              direction[label].y = direction[label].y * 0.7 + dy * 0.3;
+            }
+          }
+
+          // for outlier frames, snap back to last good position
+          if (isOutlier) {
+            x = lastPos[label].x;
+            y = lastPos[label].y;
+          } else {
+            lastPos[label] = { x, y };
+            lastPosTime[label] = now;
+          }
+
+
+          // asymmetric debounce: start drawing immediately, stop is debounced
+          if (drawing !== rawDrawing[label]) {
+            rawDrawing[label] = drawing;
+            rawChangeTime[label] = now;
+          }
+
+          // start drawing: immediate
+          if (rawDrawing[label] && !stableDrawing[label]) {
+            stableDrawing[label] = true;
+            trailHistory[label] = [];
+          }
+
+          // record rolling trail length history while drawing
+          if (stableDrawing[label]) {
+            trailHistory[label].push({ time: now, len: trails[label].length });
+            // prune old entries
+            while (trailHistory[label].length > 0 && trailHistory[label][0].time < now - TRIM_LOOKBACK_MS - DEBOUNCE_MS) {
+              trailHistory[label].shift();
+            }
+          }
+
+          // stop drawing: debounced with retroactive trim
+          if (!rawDrawing[label] && stableDrawing[label] && now - rawChangeTime[label] >= DEBOUNCE_MS) {
+            // find trail length from TRIM_LOOKBACK_MS before the stop was first detected
+            const cutoffTime = rawChangeTime[label] - TRIM_LOOKBACK_MS;
+            let trimTo = trails[label].length;
+            for (const entry of trailHistory[label]) {
+              if (entry.time >= cutoffTime) {
+                trimTo = entry.len;
+                break;
+              }
+            }
+            trails[label].length = trimTo;
+            smoothStroke(trails[label]);
+            trails[label].push(null);
+            trailHistory[label] = [];
+            stableDrawing[label] = false;
+          }
+
+          const stable = stableDrawing[label];
+          const MAX_GAP = 25; // px — interpolate if gap is bigger than this
+          if (stable) {
+            // timeout: if too long since last point, start a new stroke
+            let lpt = lastTrailPt[label];
+            if (lpt && now - lastTrailTime[label] > TRAIL_TIMEOUT_MS) {
+              trails[label].push(null);
+              lpt = null;
+              lastTrailPt[label] = null;
+            }
+
+            const dx = lpt ? x - lpt.x : 0;
+            const dy = lpt ? y - lpt.y : 0;
+            const gap = Math.sqrt(dx * dx + dy * dy);
+
+            if (!lpt || gap > MIN_POINT_DIST) {
+              // interpolate if gap is large (fast movement)
+              if (lpt && gap > MAX_GAP) {
+                const steps = Math.ceil(gap / MAX_GAP);
+                for (let s = 1; s < steps; s++) {
+                  const t = s / steps;
+                  trails[label].push({ x: lpt.x + dx * t, y: lpt.y + dy * t });
+                }
+              }
+              trails[label].push({ x, y });
+              lastTrailPt[label] = { x, y };
+              lastTrailTime[label] = now;
+              // spawn magic particles at fingertip
+              spawnParticles(x, y, label, velocity[label]);
+            }
+          } else if (wasDrawing[label] && !stable) {
+            // laplacian smooth the just-completed stroke
+            smoothStroke(trails[label]);
+            trails[label].push(null);
+            lastTrailPt[label] = null;
+          }
+          wasDrawing[label] = stable;
+
+          drawHand(landmarks, isRight, drawing);
+        }
+      }
+
+      // if a hand disappears, end its stroke
+      for (const label of ["Left", "Right"]) {
+        if (!handsPresent[label] && wasDrawing[label]) {
+          trails[label].push(null);
+          wasDrawing[label] = false;
+        }
+      }
+
+      /* debug overlay — disabled
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.font = "14px monospace";
+      ctx.fillStyle = "#0f0";
+      ctx.fillText(debugInfo, -630, 20);
+      ctx.restore();
+      */
+
+      // magic particles
+      updateAndDrawParticles();
+
+      // render all trails on the drawing canvas
+      renderTrails();
+
+      requestAnimationFrame(detect);
+    }
+
+    // laplacian smoothing: nudge each point toward avg of neighbors
+    // runs on the last stroke in the trail (everything after the last null)
+    function smoothStroke(trail) {
+      // find start of last stroke
+      let start = trail.length - 1;
+      while (start > 0 && trail[start - 1] !== null) start--;
+      const len = trail.length - start;
+      if (len < 3) return;
+
+      const PASSES = 2;
+      const FACTOR = 0.3;
+      for (let p = 0; p < PASSES; p++) {
+        for (let i = start + 1; i < trail.length - 1; i++) {
+          const prev = trail[i - 1];
+          const curr = trail[i];
+          const next = trail[i + 1];
+          if (!prev || !curr || !next) continue;
+          curr.x += FACTOR * ((prev.x + next.x) / 2 - curr.x);
+          curr.y += FACTOR * ((prev.y + next.y) / 2 - curr.y);
+        }
+      }
+    }
+
+    function dist(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    let debugInfo = "";
+
+    function checkDrawing(landmarks) {
+      const w = 0;
+      const margin = 0.02;
+      const idxTip = dist(landmarks[8], landmarks[w]);
+      const idxPip = dist(landmarks[6], landmarks[w]);
+      const midTip = dist(landmarks[12], landmarks[w]);
+      const midPip = dist(landmarks[10], landmarks[w]);
+      const rngTip = dist(landmarks[16], landmarks[w]);
+      const rngPip = dist(landmarks[14], landmarks[w]);
+      const pnkTip = dist(landmarks[20], landmarks[w]);
+      const pnkPip = dist(landmarks[18], landmarks[w]);
+
+      const indexExtended = idxTip > idxPip;
+      const middleCurled = midTip < midPip + margin;
+      const ringCurled = rngTip < rngPip + margin;
+      const pinkyCurled = pnkTip < pnkPip + margin;
+
+      // z-override for index pointing at camera
+      const otherTipsZ = (landmarks[12].z + landmarks[16].z + landmarks[20].z) / 3;
+      const indexProtrusion = otherTipsZ - landmarks[8].z;
+      const idx3Dlen = Math.sqrt(
+        (landmarks[8].x - landmarks[5].x) ** 2 +
+        (landmarks[8].y - landmarks[5].y) ** 2 +
+        (landmarks[8].z - landmarks[5].z) ** 2
+      );
+      const pip3Dlen = Math.sqrt(
+        (landmarks[6].x - landmarks[5].x) ** 2 +
+        (landmarks[6].y - landmarks[5].y) ** 2 +
+        (landmarks[6].z - landmarks[5].z) ** 2
+      );
+      const fingerRatio = pip3Dlen > 0 ? idx3Dlen / pip3Dlen : 0;
+      const handSize = dist(landmarks[0], landmarks[9]);
+      // normalize protrusion for distant hands (handSize < 0.11)
+      const normProt = handSize < 0.11 ? indexProtrusion * (0.11 / handSize) : indexProtrusion;
+      const pointingAtCamera = normProt > 0.03 && fingerRatio > 1.5;
+
+      debugInfo = `tip: ${(landmarks[8].x*640).toFixed(0)},${(landmarks[8].y*480).toFixed(0)} | hSize:${handSize.toFixed(3)} atCam:${pointingAtCamera}`;
+
+      return (indexExtended || pointingAtCamera) && middleCurled && ringCurled && pinkyCurled;
+    }
+
+    function renderTrails() {
+      drawCtx.clearRect(0, 0, 640, 480);
+
+      const colors = {
+        Left: "#33ff33",
+        Right: "#ffd700"
+      };
+
+      for (const label of ["Left", "Right"]) {
+        const trail = trails[label];
+        if (trail.length < 2) continue;
+
+        drawCtx.strokeStyle = colors[label];
+        drawCtx.lineWidth = 3;
+        drawCtx.lineCap = "round";
+        drawCtx.lineJoin = "round";
+
+        // split trail into strokes (separated by nulls)
+        const strokes = [];
+        let current = [];
+        for (const pt of trail) {
+          if (pt === null) {
+            if (current.length >= 2) strokes.push(current);
+            current = [];
+          } else {
+            current.push(pt);
+          }
+        }
+        if (current.length >= 2) strokes.push(current);
+
+        // render each stroke with quadratic bezier through midpoints
+        for (const pts of strokes) {
+          drawCtx.beginPath();
+          drawCtx.moveTo(pts[0].x, pts[0].y);
+
+          if (pts.length === 2) {
+            drawCtx.lineTo(pts[1].x, pts[1].y);
+          } else {
+            // first segment: line to midpoint of first two points
+            let midX = (pts[0].x + pts[1].x) / 2;
+            let midY = (pts[0].y + pts[1].y) / 2;
+            drawCtx.lineTo(midX, midY);
+
+            // middle segments: quadratic bezier using points as control points
+            for (let i = 1; i < pts.length - 1; i++) {
+              const nextMidX = (pts[i].x + pts[i+1].x) / 2;
+              const nextMidY = (pts[i].y + pts[i+1].y) / 2;
+              drawCtx.quadraticCurveTo(pts[i].x, pts[i].y, nextMidX, nextMidY);
+            }
+
+            // last segment: line to final point
+            const last = pts[pts.length - 1];
+            drawCtx.lineTo(last.x, last.y);
+          }
+          drawCtx.stroke();
+        }
+      }
+
+      // shape debug overlay
+      if (shapeDebugData) {
+        const { drawnScaled, truthCentered } = shapeDebugData;
+        const cx = 320, cy = 240;
+        drawCtx.strokeStyle = "rgba(0, 255, 255, 0.7)";
+        drawCtx.lineWidth = 2;
+        drawCtx.beginPath();
+        for (let i = 0; i < truthCentered.length; i++) {
+          if (i === 0) drawCtx.moveTo(cx + truthCentered[i].x, cy + truthCentered[i].y);
+          else drawCtx.lineTo(cx + truthCentered[i].x, cy + truthCentered[i].y);
+        }
+        drawCtx.stroke();
+        drawCtx.fillStyle = "rgba(255, 0, 255, 0.7)";
+        for (const p of drawnScaled) {
+          drawCtx.beginPath();
+          drawCtx.arc(cx + p.x, cy + p.y, 2, 0, Math.PI * 2);
+          drawCtx.fill();
+        }
+      }
+    }
+
+    function drawHand(landmarks, isRight, drawing) {
+      ctx.strokeStyle = "#c4a0ff";
+      ctx.lineWidth = 2;
+      for (const [start, end] of HAND_CONNECTIONS) {
+        const a = landmarks[start];
+        const b = landmarks[end];
+        ctx.beginPath();
+        ctx.moveTo(a.x * 860 - 110, a.y * 620 - 70);
+        ctx.lineTo(b.x * 860 - 110, b.y * 620 - 70);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < landmarks.length; i++) {
+        const lm = landmarks[i];
+        const x = lm.x * 860 - 110;
+        const y = lm.y * 620 - 70;
+
+        if (i === 8) {
+          if (isRight) {
+            ctx.fillStyle = drawing ? "#ffd700" : "#ff3333";
+          } else {
+            ctx.fillStyle = drawing ? "#33ff33" : "#3388ff";
+          }
+          ctx.beginPath();
+          ctx.arc(x, y, 8, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = "#c4a0ff";
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
