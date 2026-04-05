@@ -497,7 +497,16 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
               <button
                 type="button"
                 style={{ ...ghostBtn, color: '#fca5a5', borderColor: 'rgba(252,165,165,0.3)' }}
-                onClick={() => { setLobby(null); setError(''); if (onClose) onClose(); else router.replace('/play'); }}
+                onClick={() => {
+                  setLobby(null);
+                  setError('');
+                  setStatus('');
+                  autoActionDone.current = false;
+                  // Clear URL immediately so activeLobbyId doesn't block the next auto-action
+                  window.history.replaceState(null, '', '/play');
+                  if (onClose) onClose();
+                  else router.replace('/play');
+                }}
               >
                 Close Lobby
               </button>
@@ -529,7 +538,16 @@ export function PlayClient({ autoCreateWithDifficulty, joinInviteCode, onClose }
             <button
               type="button"
               style={{ ...ghostBtn, color: '#fca5a5', borderColor: 'rgba(252,165,165,0.3)', alignSelf: 'flex-start' }}
-              onClick={() => { setLobby(null); setError(''); if (onClose) onClose(); else router.replace('/play'); }}
+              onClick={() => {
+                  setLobby(null);
+                  setError('');
+                  setStatus('');
+                  autoActionDone.current = false;
+                  // Clear URL immediately so activeLobbyId doesn't block the next auto-action
+                  window.history.replaceState(null, '', '/play');
+                  if (onClose) onClose();
+                  else router.replace('/play');
+                }}
             >
               Cancel
             </button>
