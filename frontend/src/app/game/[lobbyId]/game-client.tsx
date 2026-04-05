@@ -12,6 +12,7 @@ import type {
   LobbyPlayer,
   MatchPlayer,
 } from "@/lib/types";
+import { GraphBattlePanel } from "./graph-battle-panel";
 import styles from "./page.module.css";
 
 type GameClientProps = {
@@ -98,7 +99,7 @@ function getStatusMessage(lobby: Lobby | null, currentUserId: string | null) {
     return "You have been eliminated. Watch the remaining duel play out.";
   }
 
-  return "Choose an opponent and cast damage.";
+  return "Choose an opponent, trace the equation, and hold an open palm to cast damage.";
 }
 
 function getLastActionMessage(lobby: Lobby | null) {
@@ -111,8 +112,9 @@ function getLastActionMessage(lobby: Lobby | null) {
   const attackerName = getPlayerNameById(lobby?.players ?? [], action.attackerUserId);
   const targetName = getPlayerNameById(lobby?.players ?? [], action.targetUserId);
   const defeatSuffix = action.targetDefeated ? " and knocked them out" : "";
+  const scorePrefix = action.score === null ? "" : ` with a ${action.score}% graph score`;
 
-  return `${attackerName} hit ${targetName} for ${action.damage} damage${defeatSuffix}.`;
+  return `${attackerName}${scorePrefix} hit ${targetName} for ${action.damage} damage${defeatSuffix}.`;
 }
 
 function getPlayerOutcomeLabel(
@@ -144,7 +146,8 @@ export function GameClient({ lobbyId }: GameClientProps) {
   const [lobby, setLobby] = useState<Lobby | null>(null);
   const [status, setStatus] = useState("Loading match room...");
   const [error, setError] = useState("");
-  const [attackingTargetId, setAttackingTargetId] = useState<string | null>(null);
+  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const [castingTargetId, setCastingTargetId] = useState<string | null>(null);
   const [restartingMatch, setRestartingMatch] = useState(false);
 
   useEffect(() => {
@@ -258,13 +261,13 @@ export function GameClient({ lobbyId }: GameClientProps) {
       setLobby(nextLobby);
       setStatus(getStatusMessage(nextLobby, user.id));
       setError("");
-      setAttackingTargetId(null);
+      setCastingTargetId(null);
       setRestartingMatch(false);
     });
 
     socket.on("lobby:error", ({ message }: { message: string }) => {
       setError(message);
-      setAttackingTargetId(null);
+      setCastingTargetId(null);
       setRestartingMatch(false);
     });
 
@@ -304,6 +307,31 @@ export function GameClient({ lobbyId }: GameClientProps) {
     setStatus(getStatusMessage(lobby, user?.id ?? null));
   }, [lobby, user]);
 
+  useEffect(() => {
+    if (!lobby?.match || !user) {
+      setSelectedTargetId(null);
+      return;
+    }
+
+    const targetablePlayers = lobby.players.filter((player) => {
+      if (player.userId === user.id) {
+        return false;
+      }
+
+      const matchPlayer = getMatchPlayer(lobby.match, player.userId);
+      return Boolean(matchPlayer && matchPlayer.health > 0);
+    });
+
+    if (!targetablePlayers.length) {
+      setSelectedTargetId(null);
+      return;
+    }
+
+    if (!selectedTargetId || !targetablePlayers.some((player) => player.userId === selectedTargetId)) {
+      setSelectedTargetId(targetablePlayers[0]?.userId ?? null);
+    }
+  }, [lobby, selectedTargetId, user]);
+
   async function emitSocketEvent(event: string, payload: Record<string, unknown>) {
     const socket = socketRef.current;
 
@@ -318,18 +346,19 @@ export function GameClient({ lobbyId }: GameClientProps) {
     });
   }
 
-  async function handleAttack(targetUserId: string) {
+  async function handleGraphAttack(targetUserId: string, score: number) {
     if (!lobby || !user) {
       return;
     }
 
-    setAttackingTargetId(targetUserId);
+    setCastingTargetId(targetUserId);
     setError("");
 
     try {
       const result = await emitSocketEvent("game:attack", {
         lobbyId: lobby.id,
         targetUserId,
+        score,
       });
 
       if (!result.ok) {
@@ -338,7 +367,8 @@ export function GameClient({ lobbyId }: GameClientProps) {
     } catch (attackError) {
       console.error(attackError);
       setError(attackError instanceof Error ? attackError.message : "Could not attack player.");
-      setAttackingTargetId(null);
+      setCastingTargetId(null);
+      throw attackError;
     }
   }
 
@@ -384,6 +414,7 @@ export function GameClient({ lobbyId }: GameClientProps) {
       currentMatchPlayer &&
       currentMatchPlayer.health > 0,
   );
+  const opponents = lobby?.players.filter((player) => player.userId !== user?.id) ?? [];
   const resultMessage =
     lobby?.match?.status === "finished" ? getResultMessage(lobby, user?.id ?? null) : "";
   const lastActionMessage = getLastActionMessage(lobby);
@@ -438,7 +469,7 @@ export function GameClient({ lobbyId }: GameClientProps) {
               <strong>{lobby?.state || "loading"}</strong>
             </div>
             <div className={styles.summaryCard}>
-              <span>Damage per hit</span>
+              <span>Max graph damage</span>
               <strong>{lobby?.match?.damagePerAttack ?? "--"}</strong>
             </div>
             <div className={styles.summaryCard}>
@@ -469,6 +500,17 @@ export function GameClient({ lobbyId }: GameClientProps) {
           ) : null}
         </div>
 
+        {currentPlayer ? (
+          <GraphBattlePanel
+            currentPlayer={currentPlayer}
+            lobbyMatch={lobby?.match ?? null}
+            opponents={opponents}
+            selectedTargetId={selectedTargetId}
+            disabled={!canAttack}
+            onSuccessfulScore={handleGraphAttack}
+          />
+        ) : null}
+
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
             <div>
@@ -490,6 +532,7 @@ export function GameClient({ lobbyId }: GameClientProps) {
                 const isCurrentPlayer = player.userId === user.id;
                 const isEliminated = Boolean(matchPlayer && matchPlayer.health <= 0);
                 const canTarget = canAttack && !isCurrentPlayer && !isEliminated;
+                const isSelectedTarget = player.userId === selectedTargetId;
 
                 return (
                   <li key={player.userId} className={styles.fighterCard}>
@@ -526,10 +569,14 @@ export function GameClient({ lobbyId }: GameClientProps) {
                         <button
                           type="button"
                           className={styles.attackButton}
-                          onClick={() => void handleAttack(player.userId)}
-                          disabled={!canTarget || attackingTargetId === player.userId}
+                          onClick={() => setSelectedTargetId(player.userId)}
+                          disabled={!canTarget}
                         >
-                          {attackingTargetId === player.userId ? "Casting..." : `Attack ${formatPlayerName(player)}`}
+                          {castingTargetId === player.userId
+                            ? "Applying score..."
+                            : isSelectedTarget
+                              ? `Targeting ${formatPlayerName(player)}`
+                              : `Target ${formatPlayerName(player)}`}
                         </button>
                       ) : (
                         <span className={styles.selfTag}>Your character</span>

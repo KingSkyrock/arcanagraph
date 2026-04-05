@@ -2,9 +2,11 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import { createServer } from "node:http";
+import path from "node:path";
 import { Server as SocketIOServer } from "socket.io";
 import { config } from "./config";
 import {
+  requireAttackScore,
   requireLobbyId,
   requireReadyValue,
   requireTargetUserId,
@@ -37,6 +39,7 @@ type SocketPayload = {
   lobbyId?: string;
   ready?: boolean;
   targetUserId?: string;
+  score?: number;
 };
 
 function getStatusCode(error: unknown) {
@@ -120,6 +123,8 @@ async function requireSessionUser(
 
 function createApp() {
   const app = express();
+  const dataDir = path.resolve(__dirname, "../../data");
+  const computerVisionDir = path.resolve(__dirname, "../../computervision");
 
   app.use(
     cors({
@@ -137,6 +142,8 @@ function createApp() {
 
   app.use(cookieParser());
   app.use(express.json());
+  app.use("/data", express.static(dataDir));
+  app.use("/computervision", express.static(computerVisionDir));
 
   app.get("/api/health", async (_request, response) => {
     await pingDatabase();
@@ -341,6 +348,7 @@ function registerLobbySockets(io: SocketIOServer) {
             requireLobbyId(payload.lobbyId),
             user.id,
             requireTargetUserId(payload.targetUserId),
+            requireAttackScore(payload.score),
           );
 
           io.to(`lobby:${lobby.id}`).emit("lobby:update", { lobby });

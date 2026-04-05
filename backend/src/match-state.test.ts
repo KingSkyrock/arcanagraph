@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   MatchStateError,
   applyMatchAttack,
+  calculateScoreDamage,
   createInitialMatch,
 } from "./match-state";
 
@@ -38,6 +39,34 @@ test("applyMatchAttack subtracts fixed damage and records the hit", () => {
     attackerUserId: "mage-a",
     targetUserId: "mage-b",
     damage: 20,
+    score: null,
+    targetDefeated: false,
+    occurredAt: "2026-04-04T00:00:01.000Z",
+  });
+});
+
+test("calculateScoreDamage scales damage by how close the score is to 100", () => {
+  assert.equal(calculateScoreDamage(51, 20), 1);
+  assert.equal(calculateScoreDamage(75, 20), 10);
+  assert.equal(calculateScoreDamage(100, 20), 20);
+});
+
+test("applyMatchAttack uses the graph score when one is provided", () => {
+  const match = createInitialMatch(["mage-a", "mage-b"], {
+    startedAt: "2026-04-04T00:00:00.000Z",
+  });
+
+  const nextMatch = applyMatchAttack(match, "mage-a", "mage-b", {
+    occurredAt: "2026-04-04T00:00:01.000Z",
+    score: 75,
+  });
+
+  assert.equal(nextMatch.players[1]?.health, 90);
+  assert.deepEqual(nextMatch.lastAction, {
+    attackerUserId: "mage-a",
+    targetUserId: "mage-b",
+    damage: 10,
+    score: 75,
     targetDefeated: false,
     occurredAt: "2026-04-04T00:00:01.000Z",
   });
