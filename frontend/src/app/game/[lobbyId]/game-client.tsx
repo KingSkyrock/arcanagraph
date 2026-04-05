@@ -513,6 +513,8 @@ export function GameClient({ lobbyId }: GameClientProps) {
             selectedTargetId={selectedTargetId}
             disabled={!canAttack}
             onSuccessfulScore={handleGraphAttack}
+            socket={socketRef.current}
+            lobbyId={lobbyId}
           />
         ) : null}
 

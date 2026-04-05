@@ -1,8 +1,10 @@
 'use client';
-import { useState } from 'react';
-import Navbar from '@/components/Navbar'; // Use the shared component
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import Image from 'next/image';
+import { apiUrl } from '@/lib/api';
 
 const LEADERBOARD = [
   { rank: 1, name: 'Zara W.',   division: 'Advanced',     score: 9820, wins: 47 },
@@ -58,6 +60,16 @@ function BgPattern() {
  * @returns idk
  */
 function HeroSection() {
+  const router = useRouter();
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    fetch(apiUrl('/api/auth/me'), { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.user) setLoggedIn(true); })
+      .catch(() => {});
+  }, []);
+
   const scrollDown = () => document.getElementById('leaderboard')?.scrollIntoView({ behavior: 'smooth' });
 
   return (
@@ -108,7 +120,7 @@ function HeroSection() {
 
         {/* PLAY NOW — amber pill with strong drop shadow like reference */}
         <Link
-          href="/play"
+          href={loggedIn ? '/play' : '/login'}
           style={{
             textDecoration: 'none',
             background: '#f59e0b',
@@ -133,7 +145,6 @@ function HeroSection() {
           }}
           onMouseLeave={e => {
             e.currentTarget.style.transform = 'scale(1) translateY(0)';
-            // Reset to the non-glowy shadow
             e.currentTarget.style.boxShadow = '0 4px 0px #b45309, 0 4px 12px rgba(0,0,0,0.2)';
             e.currentTarget.style.background = '#f59e0b';
           }}

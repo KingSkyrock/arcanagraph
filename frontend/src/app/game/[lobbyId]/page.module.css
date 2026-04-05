@@ -164,6 +164,13 @@
   align-items: start;
 }
 
+.cvBattleLayoutSolo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
 .cvContainer {
   position: relative;
   width: 100%;
@@ -210,15 +217,14 @@
 }
 
 .cvOpponent {
-  min-height: 240px;
-  padding: 18px;
+  padding: 12px;
   border: 2px solid rgba(255, 255, 255, 0.24);
   border-radius: 18px;
   background: rgba(11, 31, 92, 0.4);
   color: #e0e0e0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .cvOpponentCard {

@@ -40,8 +40,8 @@ export default function PlayPage() {
   const [mode, setMode] = useState<string | null>(null);
   const router = useRouter();
 
-  function goToWebcam() {
-    router.push('/computervision');
+  function goToSolo() {
+    router.push('/game/solo');
   }
 
   const getLegoStyle = (bg: string, shadow: string, isSmall = false): React.CSSProperties => ({
@@ -197,7 +197,7 @@ export default function PlayPage() {
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(34, 197, 94)', 'rgb(21, 128, 61)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(21, 128, 61)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(21, 128, 61)', true, 'rgb(22, 163, 74)')}
-                onClick={() => mode === 'battle' ? setStep('lobby') : goToWebcam()}
+                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
               >Shapes</button>
 
               <button
@@ -206,7 +206,7 @@ export default function PlayPage() {
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(245, 158, 11)', 'rgb(180, 83, 9)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(180, 83, 9)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(180, 83, 9)', true, 'rgb(217, 119, 6)')}
-                onClick={() => mode === 'battle' ? setStep('lobby') : goToWebcam()}
+                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
               >Beginner Functions</button>
 
               <button
@@ -215,7 +215,7 @@ export default function PlayPage() {
                 onMouseLeave={e => handleMouseLeave(e, 'rgb(239, 104, 104)', 'rgb(185, 28, 28)', true)}
                 onMouseDown={e => handleMouseDown(e, 'rgb(185, 28, 28)')}
                 onMouseUp={e => handleMouseEnter(e, 'rgb(185, 28, 28)', true, 'rgb(220, 38, 38)')}
-                onClick={() => mode === 'battle' ? setStep('lobby') : goToWebcam()}
+                onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
               >Advanced Functions</button>
             </div>
 
@@ -227,7 +227,7 @@ export default function PlayPage() {
               onMouseLeave={e => handleMouseLeave(e, 'rgb(162, 28, 175)', 'rgb(112, 26, 117)', true)}
               onMouseDown={e => handleMouseDown(e, 'rgb(112, 26, 117)')}
               onMouseUp={e => handleMouseEnter(e, 'rgb(112, 26, 117)', true, 'rgb(134, 25, 143)')}
-              onClick={() => mode === 'battle' ? setStep('lobby') : goToWebcam()}
+              onClick={() => mode === 'battle' ? setStep('lobby') : goToSolo()}
             >Custom</button>
 
             <button
